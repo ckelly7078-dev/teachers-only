@@ -13,6 +13,7 @@ from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
 
 from .db import DETAIL, HERE, UNITS, connection, search
+from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
 
@@ -55,12 +56,17 @@ def get_api(dbpath,route,args,actor=None):
     if route=='search':
         return search(dbpath,unit,args.get('q',''),int(args.get('limit','5')),args.get('skill',''))
     with connection(dbpath) as db:
+        if route=='examiner':
+            return examiner_search(db,unit,args.get('q',''),int(args.get('limit','8')),args.get('skill',''))
         if route=='drafts':
             return [dict(id=r['id'],state=r['state'],**json.loads(r['data'])) for r in db.execute(
                 'SELECT id,state,data FROM practice_drafts WHERE owner=? AND id<? ORDER BY id DESC LIMIT 11',
                 (actor,int(args.get('before',2**63-1))))]
         if route=='summary':
-            return dict(units=json.loads(db.execute('SELECT summary FROM state').fetchone()[0]),
+            units=json.loads(db.execute('SELECT summary FROM state').fetchone()[0])
+            for u in units:
+                u.update(examiner_counts(db,u['unit']))
+            return dict(units=units,
                         model=model_available(),skills=[dict(s) for s in db.execute('SELECT * FROM skills ORDER BY page,id')])
         if route=='papers':
             return [dict(r) for r in db.execute("""SELECT year,series,component,status,reason,paper,scheme FROM pairs
@@ -73,7 +79,8 @@ def get_api(dbpath,route,args,actor=None):
             row = db.execute(DETAIL+' WHERE q.id=?',(int(args['id']),)).fetchone()
             if row:
                 version = db.execute('SELECT coalesce(max(id),0) FROM reviews WHERE question_id=?',(row['id'],)).fetchone()[0]
-                return dict(row,version=version)
+                evidence=examiner_search(db,row['unit'],paper=row['paper'],num=row['num'])
+                return dict(row,version=version,examiner_evidence=evidence)
             raise ValueError('Unknown record')
     raise LookupError()
 
