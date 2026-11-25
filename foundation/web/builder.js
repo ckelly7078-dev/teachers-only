@@ -146,7 +146,9 @@ async function initBuilder(){
       const feedback=byId('builder-feedback');feedback.textContent=settings.mode==='hybrid'?'Generating text questions locally and using AI only for diagram topics…':settings.mode==='model'?'AI is designing and checking your selected topics…':'Generating and checking your selected topics…';
       try{
         await workspaceTask(async()=>{
-          const rows=await api('studio-mixed',settings,true);
+          const diagram_history=[...new Set(workspaceRows.map(r=>r.diagram_key).filter(Boolean))];
+          const shape_history=[...new Set(workspaceRows.map(r=>r.diagram_shape).filter(Boolean))].slice(-150);
+          const rows=await api('studio-mixed',{...settings,diagram_history,shape_history},true);
           await showStudioBatch(rows);
           feedback.textContent=rows.length+' validated questions added to this worksheet.'+(rows[0]?.generation_notice?' '+rows[0].generation_notice:'');
         });
