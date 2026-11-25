@@ -2,9 +2,16 @@
 const byId = id => document.getElementById(id);
 const statusText = text => { byId('status').textContent = text; };
 let skills = [];
+// Presentation only: keep the raw validated question and answer unchanged.
+function formatMathText(value) {
+  if (typeof value !== 'string') return value;
+  const superscripts = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  return value.replace(/\^(?:\{(-?\d+)\}|(-?\d+))(?!\d|\.\d)/g,
+    (_, braced, plain) => [...(braced ?? plain)].map(c => c==='-'?'⁻':superscripts[Number(c)]).join(''));
+}
 function el(tag, text, className) {
   const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
+  if (text !== undefined) node.textContent = formatMathText(text);
   if (className) node.className = className;
   return node;
 }
