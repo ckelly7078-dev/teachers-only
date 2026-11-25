@@ -27,8 +27,8 @@ function renderStudioDiagram(diagram) {
     return node;
   }
   const svg=element('svg',{viewBox:'0 0 480 280',role:'img','aria-label':diagram.alt,width:'100%',height:'auto'});
-  svg.append(element('polygon',{points:diagram.polygon.map(p=>p.join(',')).join(' '),fill:'#eef2f6',stroke:'#152941','stroke-width':2.3,'stroke-linejoin':'round'}));
   for(const [x1,y1,x2,y2] of guides) svg.append(element('line',{x1,y1,x2,y2,stroke:'#6b7280','stroke-width':1.2,'stroke-dasharray':'5 4'}));
+  svg.append(element('polygon',{points:diagram.polygon.map(p=>p.join(',')).join(' '),fill:'#eef2f6',stroke:'#152941','stroke-width':2.3,'stroke-linejoin':'round'}));
   for(const [x1,y1,x2,y2] of dimensions) svg.append(element('line',{x1,y1,x2,y2,stroke:'#475569','stroke-width':1.15}));
   for(const [x1,y1,x2,y2] of diagram.lines) svg.append(element('line',{x1,y1,x2,y2,stroke:'#17365d','stroke-width':2,'stroke-linecap':'round'}));
   for(const [i,[x,y,text]] of diagram.labels.entries()) svg.append(element('text',{x,y,transform:'rotate('+angles[i]+' '+x+' '+y+')',fill:'#14284b','font-size':16,'font-family':'Arial, sans-serif','font-weight':500,'text-anchor':'middle','paint-order':'stroke','stroke':'#f7f9fc','stroke-width':3,'stroke-linejoin':'round'},text));
