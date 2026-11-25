@@ -50,12 +50,7 @@ async function summary() {
   const data = await api('summary');
   skills = data.skills;
   byId('model').disabled = !data.model;
-  byId('studio-ai-option').disabled = !data.studio_ai_configured;
-  byId('prompt-submit').disabled = !data.studio_ai_configured;
-  byId('prompt-feedback').textContent=data.studio_ai_configured?'AI question design available.':'AI not configured; use the manual question builder.';
-  if(!data.studio_ai_configured) byId('manual-options').open=true;
-  if(!data.studio_ai_configured) byId('studio-mode').value='local';
-  byId('studio-ai-status').textContent=data.studio_ai_configured ? 'AI-assisted selection configured. Each AI batch calls the model once; local mode uses no API.' : 'AI-assisted selection not configured. Local generation remains available.';
+  configureBuilderAI(data.studio_ai_configured);
   byId('units').replaceChildren(...data.units.map(u => {
     const card = el('div', undefined, 'unit');
     card.append(el('h3',u.unit),el('p',u.verified ? 'Partial retrieval available' : 'Inventory only'),
@@ -177,24 +172,6 @@ async function inspect(id) {
   };
   target.scrollIntoView({block:'start'});
 }
-let studioFamilies=[];
-function showStudioEvidence() {
-  const item=studioFamilies.find(x=>x.family===byId('studio-family').value);
-  byId('studio-evidence').textContent=item ? item.skill_label+' · specification p. '+item.spec_page+
-    (item.sources.length?' · '+item.sources.length+' related-skill source-checked references':' · specification only; no source-checked references in this unit') : 'No enabled family for this unit.';
-}
-async function studioCatalog(){
-  const unit=byId('studio-unit').value, selector=byId('studio-family');
-  const submit=byId('studio').querySelector('button');
-  submit.disabled=true; selector.replaceChildren(); studioFamilies=[]; showStudioEvidence();
-  const rows=await api('studio-catalog',{unit});
-  if(byId('studio-unit').value!==unit) return;
-  studioFamilies=rows;
-  for(const item of rows) selector.add(new Option(item.label,item.family));
-  showStudioEvidence(); submit.disabled=!rows.length;
-}
-byId('studio-unit').onchange=()=>run(studioCatalog);
-byId('studio-family').onchange=showStudioEvidence;
 function examParts(d){
   const chunks=d.question.split(/(?:^|\s)\(([a-z])\)\s+/);
   if(chunks.length>=3 && chunks.length%2===1){
@@ -236,31 +213,8 @@ async function showStudioBatch(rows){
   await refreshWorkspace();
   statusText(rows.length+' new validated drafts added · '+rows.reduce((n,r)=>n+r.marks,0)+' marks in this batch. Earlier questions on this page are retained.');
 }
-byId('prompt-example').onclick=()=>{
-  byId('prompt-unit').value='M1';
-  byId('teacher-prompt').value='Create three 4-mark shopping discount questions about the reduction, sale price and money left in a budget. Include worked solutions and mark schemes.';
-  byId('teacher-prompt').focus();
-};
-onForm('prompt-studio',async args=>workspaceTask(async()=>{
-  const feedback=byId('prompt-feedback');
-  feedback.textContent='Designing and checking your questions…';
-  statusText('AI is designing mathematical parameters…');
-  try{
-    const rows=await api('studio-prompt',{...args,temporary:true},true);
-    await showStudioBatch(rows);
-    feedback.textContent=rows[0]?.generation_notice || (rows.length+' validated drafts added. Review each question before approving.');
-  }catch(error){
-    feedback.textContent=error.message;
-    throw error;
-  }
-}));
-onForm('studio',async args=>workspaceTask(async()=>{
-  statusText(args.mode==='model'?'Selecting validated questions with AI…':'Generating validated questions…');
-  const rows=await api('studio',{...args,count:Number(args.count),temporary:true},true);
-  await showStudioBatch(rows);
-}));
 onForm('generate',async args=>workspaceTask(async()=>{
   const d=await api('practice',{...args,temporary:true},true);
   await showStudioBatch([d]);
 }));
-run(async()=>{ await initWorksheet(); await summary(); await studioCatalog(); statusText('Foundation inventory loaded. New temporary worksheet ready.'); });
+run(async()=>{ await initWorksheet(); await summary(); await initBuilder(); statusText('Foundation inventory loaded. New temporary worksheet ready.'); });
