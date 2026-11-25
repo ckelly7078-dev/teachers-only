@@ -231,75 +231,35 @@ function examPreview(d,number){
   preview.append(el('div','Total: '+d.marks+' marks','exam-total'));
   return preview;
 }
-function showStudioBatch(rows){
-  const wrap=byId('studio-results');wrap.replaceChildren();
-  rows.forEach((d,i)=>{
-    const card=el('article');
-    card.append(el('h3',d.label),el('small',d.unit+' · '+d.difficulty),
-      examPreview(d,i+1),
-      el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
-      el('small',d.model_role|| (d.mode==='model'?'AI-assisted · validated template':'Local generation')),
-      button('Review solution and mark scheme',()=>{showDraft(d);byId('draft').scrollIntoView({block:'start'});}));
-    wrap.append(card);
-  });
-  statusText(rows.length+' validated drafts saved for teacher review · '+rows.reduce((n,r)=>n+r.marks,0)+' marks total.');
+async function showStudioBatch(rows){
+  await refreshWorkspace();
+  statusText(rows.length+' new validated drafts added · '+rows.reduce((n,r)=>n+r.marks,0)+' marks in this batch. Earlier questions are retained.');
 }
 byId('prompt-example').onclick=()=>{
   byId('prompt-unit').value='M1';
   byId('teacher-prompt').value='Create three 4-mark shopping discount questions about the reduction, sale price and money left in a budget. Include worked solutions and mark schemes.';
   byId('teacher-prompt').focus();
 };
-onForm('prompt-studio',async args=>{
+onForm('prompt-studio',async args=>workspaceTask(async()=>{
   const feedback=byId('prompt-feedback');
   feedback.textContent='Designing and checking your questions…';
   statusText('AI is designing mathematical parameters…');
   try{
     const rows=await api('studio-prompt',args,true);
-    showStudioBatch(rows);
-    feedback.textContent=rows[0]?.generation_notice || (rows.length+' validated drafts generated. Check that the questions meet your request before approving them.');
+    await showStudioBatch(rows);
+    feedback.textContent=rows[0]?.generation_notice || (rows.length+' validated drafts added. Review each question before approving.');
   }catch(error){
     feedback.textContent=error.message;
     throw error;
   }
-});
-onForm('studio',async args=>{
+}));
+onForm('studio',async args=>workspaceTask(async()=>{
   statusText(args.mode==='model'?'Selecting validated questions with AI…':'Generating validated questions…');
   const rows=await api('studio',{...args,count:Number(args.count)},true);
-  showStudioBatch(rows);
-});
-onForm('generate',async args=>{
+  await showStudioBatch(rows);
+}));
+onForm('generate',async args=>workspaceTask(async()=>{
   const d=await api('practice',args,true);
-  showDraft(d);
-  statusText('Draft ready for teacher review.');
-});
-function showDraft(d) {
-  const wrap=byId('draft'), form=el('div',undefined,'stack');
-  wrap.replaceChildren(el('h3',d.label),el('small',d.unit+' · '+d.state),form);
-  const prompt=d.family?{value:d.question,readOnly:true}:field(form,'Practice question','textarea',d.question);
-  if(d.family){form.append(examPreview(d),el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
-  else {const diagram=renderStudioDiagram(d.diagram);if(diagram) form.append(diagram);}
-  const solution=el('ol'), rubric=el('ul');
-  for(const step of d.solution) solution.append(el('li',step));
-  for(const rule of d.rubric) rubric.append(el('li',rule));
-  form.append(el('strong','Worked solution'),solution,el('div',d.answer,'review-answer'),el('strong','Proposed marking scheme · '+d.marks+' marks'),rubric,
-    el('p',d.validation),el('small',d.spec+' · '+d.difficulty),el('small',d.sources.map(reference).join(' / ')));
-  if(d.model_role) form.append(el('small','Model role: '+d.model_role));
-  if(d.family) form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'),el('small','Proposed marking scheme; teacher approval required.'));
-  if (d.state==='approved') {
-    prompt.readOnly=true; form.append(el('strong','Approved by teacher')); return;
-  }
-  form.append(button('Confirm solution and approve question',async()=>{
-    await api('approve',{id:d.id,question:prompt.value},true);
-    prompt.readOnly=true; form.lastChild.replaceWith(el('strong','Approved by teacher')); statusText('Approved practice saved.');
-  }));
-}
-async function history(before) {
-  const rows = await api('drafts',before ? {before} : {});
-  const wrap = byId('drafts');
-  wrap.replaceChildren(el('h3','My saved practice'));
-  for (const d of rows.slice(0,10)) wrap.append(button(d.id+' · '+d.skill+' · '+d.state,()=>showDraft(d)));
-  if (rows.length>10) wrap.append(button('Older practice',()=>history(rows[9].id)));
-  if (!rows.length) wrap.append(el('p','No saved practice yet.'));
-}
-byId('history').onclick=()=>run(()=>history());
-run(async()=>{ await summary(); await studioCatalog(); statusText('Foundation inventory loaded.'); });
+  await showStudioBatch([d]);
+}));
+run(async()=>{ await initWorksheet(); await summary(); await studioCatalog(); statusText('Foundation inventory and saved worksheet loaded.'); });
