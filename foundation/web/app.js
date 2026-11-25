@@ -51,6 +51,9 @@ async function summary() {
   skills = data.skills;
   byId('model').disabled = !data.model;
   byId('studio-ai-option').disabled = !data.studio_ai_configured;
+  byId('prompt-submit').disabled = !data.studio_ai_configured;
+  byId('prompt-feedback').textContent=data.studio_ai_configured?'AI question design available.':'AI not configured; use the manual question builder.';
+  if(!data.studio_ai_configured) byId('manual-options').open=true;
   if(!data.studio_ai_configured) byId('studio-mode').value='local';
   byId('studio-ai-status').textContent=data.studio_ai_configured ? 'AI-assisted selection configured. Each AI batch calls the model once; local mode uses no API.' : 'AI-assisted selection not configured. Local generation remains available.';
   byId('units').replaceChildren(...data.units.map(u => {
@@ -192,21 +195,77 @@ async function studioCatalog(){
 }
 byId('studio-unit').onchange=()=>run(studioCatalog);
 byId('studio-family').onchange=showStudioEvidence;
+function examParts(d){
+  const chunks=d.question.split(/(?:^|\s)\(([a-z])\)\s+/);
+  if(chunks.length>=3 && chunks.length%2===1){
+    const parts=[];
+    for(let i=1;i<chunks.length;i+=2){
+      const part=chunks[i], marks=d.rubric.filter(r=>r.startsWith('('+part+')')).length;
+      if(part!==String.fromCharCode(97+parts.length)||!marks||!chunks[i+1].trim()) return null;
+      parts.push({part,text:chunks[i+1].trim(),marks});
+    }
+    if(parts.reduce((n,p)=>n+p.marks,0)===d.marks) return {context:chunks[0].trim(),parts};
+  }
+  return null;
+}
+function examPreview(d,number){
+  const preview=el('div',undefined,'exam-preview');
+  const heading=el('div',undefined,'exam-heading');
+  heading.append(el('strong',number?'Question '+number:'Question preview'),el('span','['+d.marks+' marks]'));
+  preview.append(heading);
+  const split=examParts(d);
+  const context=split?.context;
+  if(context)preview.append(el('p',context,'exam-context'));
+  const diagram=renderStudioDiagram(d.diagram);
+  if(diagram)preview.append(diagram);
+  const parts=split?split.parts:[{part:'',text:d.question,marks:d.marks}];
+  for(const p of parts){
+    const block=el('div',undefined,'exam-part'), task=el('div',undefined,'exam-task');
+    task.append(el('span',(p.part?'('+p.part+') ':'')+p.text),el('span','['+p.marks+(p.marks===1?' mark]':' marks]')));
+    block.append(task);
+    for(let i=0;i<Math.min(3,p.marks);i++){
+      const line=el('div',undefined,'exam-line'); line.setAttribute('aria-hidden','true');block.append(line);
+    }
+    preview.append(block);
+  }
+  preview.append(el('div','Total: '+d.marks+' marks','exam-total'));
+  return preview;
+}
+function showStudioBatch(rows){
+  const wrap=byId('studio-results');wrap.replaceChildren();
+  rows.forEach((d,i)=>{
+    const card=el('article');
+    card.append(el('h3',d.label),el('small',d.unit+' · '+d.difficulty),
+      examPreview(d,i+1),
+      el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
+      el('small',d.model_role|| (d.mode==='model'?'AI-assisted · validated template':'Local generation')),
+      button('Review solution and mark scheme',()=>{showDraft(d);byId('draft').scrollIntoView({block:'start'});}));
+    wrap.append(card);
+  });
+  statusText(rows.length+' validated drafts saved for teacher review · '+rows.reduce((n,r)=>n+r.marks,0)+' marks total.');
+}
+byId('prompt-example').onclick=()=>{
+  byId('prompt-unit').value='M1';
+  byId('teacher-prompt').value='Create three 4-mark shopping discount questions about the reduction, sale price and money left in a budget. Include worked solutions and mark schemes.';
+  byId('teacher-prompt').focus();
+};
+onForm('prompt-studio',async args=>{
+  const feedback=byId('prompt-feedback');
+  feedback.textContent='Designing and checking your questions…';
+  statusText('AI is designing mathematical parameters…');
+  try{
+    const rows=await api('studio-prompt',args,true);
+    showStudioBatch(rows);
+    feedback.textContent=rows.length+' validated drafts generated. Check that the questions meet your request before approving them.';
+  }catch(error){
+    feedback.textContent=error.message;
+    throw error;
+  }
+});
 onForm('studio',async args=>{
   statusText(args.mode==='model'?'Selecting validated questions with AI…':'Generating validated questions…');
   const rows=await api('studio',{...args,count:Number(args.count)},true);
-  const wrap=byId('studio-results'); wrap.replaceChildren();
-  for(const d of rows){
-    const card=el('article');
-    card.append(el('h3',d.label),el('p',d.question),el('small',d.unit+' · '+d.marks+' marks · '+d.difficulty),
-      el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
-      el('small',d.mode==='model'?'AI-selected · validated template':'Local generation'),
-      button('Review draft',()=>{showDraft(d); byId('draft').scrollIntoView({block:'start'});}));
-    const diagram=renderStudioDiagram(d.diagram);
-    if(diagram) card.insertBefore(diagram,card.lastChild);
-    wrap.append(card);
-  }
-  statusText(rows.length+' validated drafts saved for teacher review.');
+  showStudioBatch(rows);
 });
 onForm('generate',async args=>{
   const d=await api('practice',args,true);
@@ -216,15 +275,13 @@ onForm('generate',async args=>{
 function showDraft(d) {
   const wrap=byId('draft'), form=el('div',undefined,'stack');
   wrap.replaceChildren(el('h3',d.label),el('small',d.unit+' · '+d.state),form);
-  const prompt=field(form,'Practice question','textarea',d.question);
-  if(d.family){prompt.readOnly=true; form.append(el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
-  if(d.family && d.question.includes('(b)')) prompt.rows=6;
-  const diagram=renderStudioDiagram(d.diagram);
-  if(diagram) form.append(diagram);
+  const prompt=d.family?{value:d.question,readOnly:true}:field(form,'Practice question','textarea',d.question);
+  if(d.family){form.append(examPreview(d),el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
+  else {const diagram=renderStudioDiagram(d.diagram);if(diagram) form.append(diagram);}
   const solution=el('ol'), rubric=el('ul');
   for(const step of d.solution) solution.append(el('li',step));
   for(const rule of d.rubric) rubric.append(el('li',rule));
-  form.append(el('strong','Worked solution'),solution,el('strong',d.answer+' · '+d.marks+' marks'),rubric,
+  form.append(el('strong','Worked solution'),solution,el('div',d.answer,'review-answer'),el('strong','Proposed marking scheme · '+d.marks+' marks'),rubric,
     el('p',d.validation),el('small',d.spec+' · '+d.difficulty),el('small',d.sources.map(reference).join(' / ')));
   if(d.model_role) form.append(el('small','Model role: '+d.model_role));
   if(d.family) form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'),el('small','Proposed marking scheme; teacher approval required.'));
