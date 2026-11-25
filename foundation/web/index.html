@@ -10,6 +10,12 @@
 <section><h2>Examiner insights</h2><p>Find source-linked teaching notes and provisional whole-question topic tags. These are not marking rules or teacher-approved assessments.</p><form id="examiner-search"><label>Foundation unit<select name="unit"><option>M1</option><option>M2</option><option>M5</option><option>M6</option></select></label><label>Topic or misconception<input name="q" maxlength="160" placeholder="e.g. ratio or binary"></label><button>Find insights</button></form><div id="examiner-results"></div></section>
 <section><h2>Inspect source records</h2><form id="browse"><label>Foundation unit<select name="unit"><option>M1</option><option>M2</option><option>M5</option><option>M6</option></select></label><button>Browse papers</button></form>
 <div id="papers"></div><div id="records"></div><div id="editor"></div></section>
-<section><h2>Generate M1 practice</h2><form id="generate"><label>Skill<select name="skill"><option value="percentage">Percentages</option><option value="metric">Metric conversions</option><option value="finance">Personal finance</option></select></label>
+<section><h2>Question Studio · Foundation</h2><p>Generate original practice from curriculum-linked templates. Mathematical checks are automatic; difficulty is an uncalibrated estimate and all questions and proposed marks require teacher review.</p>
+<form id="studio"><label>Assessment unit<select id="studio-unit" name="unit"><option>M1</option><option>M2</option><option>M5</option><option>M6</option></select></label>
+<label>Question family<select id="studio-family" name="family" required></select></label>
+<label>Difficulty<select name="difficulty"><option value="easy">Easy</option><option value="standard" selected>Standard</option><option value="challenge">Challenge</option></select></label>
+<label>Number<input type="number" name="count" min="1" max="10" value="5" required></label>
+<button>Generate validated drafts</button></form><p id="studio-evidence"></p><div id="studio-results"></div></section>
+<section><h2>Generate M1 practice (original pilot)</h2><form id="generate"><label>Skill<select name="skill"><option value="percentage">Percentages</option><option value="metric">Metric conversions</option><option value="finance">Personal finance</option></select></label>
 <label>Generator<select name="mode"><option value="local">Validated local generator</option><option disabled id="model" value="model">Model-assisted parameters</option></select></label><button>Generate draft</button></form><div id="draft"></div><p><button id="history" type="button">My saved practice</button></p><div id="drafts"></div></section>
 </main></body></html>
