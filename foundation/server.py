@@ -98,8 +98,12 @@ def dispatch(dbpath,route,data,actor):
     if route=='review':
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
+    if route in ('studio-prompt','studio','practice') and 'temporary' in data and type(data['temporary']) is not bool:
+        raise ValueError('Temporary mode must be a boolean')
     if route=='studio-prompt':
         rows = studio_prompt.author(dbpath,data['unit'],data['prompt'])
+        if data.get('temporary') is True:
+            return [dict(row,state='draft') for row in rows]
         with connection(dbpath) as db, db:
             return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                         (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
@@ -109,11 +113,15 @@ def dispatch(dbpath,route,data,actor):
             raise ValueError('Choose local or model-assisted generation')
         generator = studio_ai.generate if mode=='model' else studio_generate
         rows = generator(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1))
+        if data.get('temporary') is True:
+            return [dict(row,state='draft') for row in rows]
         with connection(dbpath) as db, db:
             return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                         (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
     if route=='practice':
         practice = generate(dbpath,data['skill'],data.get('mode','local'))
+        if data.get('temporary') is True:
+            return dict(practice,state='draft')
         with connection(dbpath) as db, db:
             draft_id = db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                                   (actor,json.dumps(practice))).lastrowid
