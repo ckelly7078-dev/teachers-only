@@ -50,6 +50,9 @@ async function summary() {
   const data = await api('summary');
   skills = data.skills;
   byId('model').disabled = !data.model;
+  byId('studio-ai-option').disabled = !data.studio_ai_configured;
+  if(!data.studio_ai_configured) byId('studio-mode').value='local';
+  byId('studio-ai-status').textContent=data.studio_ai_configured ? 'AI-assisted selection configured. Each AI batch calls the model once; local mode uses no API.' : 'AI-assisted selection not configured. Local generation remains available.';
   byId('units').replaceChildren(...data.units.map(u => {
     const card = el('div', undefined, 'unit');
     card.append(el('h3',u.unit),el('p',u.verified ? 'Partial retrieval available' : 'Inventory only'),
@@ -190,12 +193,14 @@ async function studioCatalog(){
 byId('studio-unit').onchange=()=>run(studioCatalog);
 byId('studio-family').onchange=showStudioEvidence;
 onForm('studio',async args=>{
+  statusText(args.mode==='model'?'Selecting validated questions with AI…':'Generating validated questions…');
   const rows=await api('studio',{...args,count:Number(args.count)},true);
   const wrap=byId('studio-results'); wrap.replaceChildren();
   for(const d of rows){
     const card=el('article');
     card.append(el('h3',d.label),el('p',d.question),el('small',d.unit+' · '+d.marks+' marks · '+d.difficulty),
       el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
+      el('small',d.mode==='model'?'AI-selected · validated template':'Local generation'),
       button('Review draft',()=>{showDraft(d); byId('draft').scrollIntoView({block:'start'});}));
     const diagram=renderStudioDiagram(d.diagram);
     if(diagram) card.insertBefore(diagram,card.lastChild);
@@ -221,6 +226,7 @@ function showDraft(d) {
   for(const rule of d.rubric) rubric.append(el('li',rule));
   form.append(el('strong','Worked solution'),solution,el('strong',d.answer+' · '+d.marks+' marks'),rubric,
     el('p',d.validation),el('small',d.spec+' · '+d.difficulty),el('small',d.sources.map(reference).join(' / ')));
+  if(d.model_role) form.append(el('small','Model role: '+d.model_role));
   if(d.family) form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'),el('small','Proposed marking scheme; teacher approval required.'));
   if (d.state==='approved') {
     prompt.readOnly=true; form.append(el('strong','Approved by teacher')); return;
