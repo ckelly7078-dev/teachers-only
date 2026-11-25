@@ -60,7 +60,7 @@ async function decision(d,target){
     expandedRows.delete(d.id);
     await refreshWorkspace();
     statusText('Question #'+d.id+' · '+stateLabels[target]);
-    if(target==='under_review')byId('question-'+d.id)?.scrollIntoView({block:'nearest'});
+    // Keep the teacher in the current list; review is opened without navigating to it.
   });
 }
 async function approveQuestion(d){
