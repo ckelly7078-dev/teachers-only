@@ -31,7 +31,7 @@ class StudioTest(unittest.TestCase):
             for a,b,c in itertools.product(range(2,19),repeat=3):
                 q,ans,steps,rubric=build(family,a,b,c)
                 self.assertTrue(validate(family,a,b,c,ans),(family,a,b,c))
-                bad=(ans[0]+1,ans[1]) if isinstance(ans,tuple) else ans+1
+                bad=(ans[0]+1,*ans[1:]) if isinstance(ans,tuple) else ans+1
                 self.assertFalse(validate(family,a,b,c,bad),(family,a,b,c))
                 self.assertTrue(q and steps and rubric)
 
