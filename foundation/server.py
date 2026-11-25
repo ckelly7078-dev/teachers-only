@@ -17,6 +17,7 @@ from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
 from .studio import catalog as studio_catalog, generate as studio_generate
+from . import studio_ai
 
 API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
@@ -71,7 +72,7 @@ def get_api(dbpath,route,args,actor=None):
             for u in units:
                 u.update(examiner_counts(db,u['unit']))
             return dict(units=units,
-                        model=model_available(),skills=[dict(s) for s in db.execute('SELECT * FROM skills ORDER BY page,id')])
+                        model=model_available(),studio_ai_configured=studio_ai.available(),skills=[dict(s) for s in db.execute('SELECT * FROM skills ORDER BY page,id')])
         if route=='papers':
             return [dict(r) for r in db.execute("""SELECT year,series,component,status,reason,paper,scheme FROM pairs
                 WHERE unit=? AND (year,series,component)>(?,?,?) ORDER BY year,series,component LIMIT 51""",
@@ -94,7 +95,11 @@ def dispatch(dbpath,route,data,actor):
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
     if route=='studio':
-        rows = studio_generate(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1))
+        mode = data.get('mode','local')
+        if mode not in ('local','model'):
+            raise ValueError('Choose local or model-assisted generation')
+        generator = studio_ai.generate if mode=='model' else studio_generate
+        rows = generator(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1))
         with connection(dbpath) as db, db:
             return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                         (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
@@ -173,6 +178,8 @@ def application(env,start):
         return send('400 Bad Request',{'error':str(exc)[:200]})
     except Conflict as exc:
         return send('409 Conflict',{'error':str(exc)})
+    except studio_ai.StudioAIUnavailable as exc:
+        return send('503 Service Unavailable',{'error':str(exc)})
     except (ModelUnavailable,FileNotFoundError,sqlite3.OperationalError):
         return send('503 Service Unavailable',{'error':'The database or configured service is unavailable'})
     except LookupError:
