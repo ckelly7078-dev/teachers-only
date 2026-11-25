@@ -17,7 +17,7 @@ from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
 from .studio import catalog as studio_catalog, generate as studio_generate
-from . import studio_ai, studio_prompt, workspace
+from . import studio_ai, studio_prompt, studio_mixed, workspace
 
 API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
@@ -26,7 +26,9 @@ ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/
           '/foundation/web/diagrams.js':(HERE/'web/diagrams.js','text/javascript'),
           '/foundation/web/style.css':(HERE/'web/style.css','text/css'),
           '/foundation/web/worksheet.js':(HERE/'web/worksheet.js','text/javascript'),
-          '/foundation/web/worksheet.css':(HERE/'web/worksheet.css','text/css')}
+          '/foundation/web/worksheet.css':(HERE/'web/worksheet.css','text/css'),
+          '/foundation/web/builder.js':(HERE/'web/builder.js','text/javascript'),
+          '/foundation/web/builder.css':(HERE/'web/builder.css','text/css')}
 
 
 def credentials(username,password,salt=None):
@@ -95,6 +97,9 @@ def get_api(dbpath,route,args,actor=None):
 
 
 def dispatch(dbpath,route,data,actor):
+    if route=='studio-mixed':
+        # The structured builder is deliberately temporary: never persist these drafts.
+        return [dict(row,state='draft') for row in studio_mixed.generate(dbpath,data)]
     if route=='review':
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
