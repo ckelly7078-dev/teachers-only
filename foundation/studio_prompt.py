@@ -18,7 +18,7 @@ PARAMETERS = {
     'shopping-discount':'bicycle price £20*a, discount 5*b percent, c pounds left after purchase; three parts reduction, sale price, balance',
     'l-shape':'outer width a+b, height b+c, removed b by c corner',
     'trapezium':'parallel sides 2*a and 2*(a+b), height c',
-    'pythagoras':'3a,4a rectangle, diagonal 5a; rate b+c',
+    'pythagoras':'a scales an exact right triangle: b mod 4 selects (5,12,13), (8,15,17), (20,21,29), or (3,4,5); even c swaps the legs; rate b+c',
     'map-scale':'legs a,b cm, c km per cm',
     'expected-frequency':'a,b,c counter counts; draws with replacement',
     'gradient':'rise a, run b, intercept c',
