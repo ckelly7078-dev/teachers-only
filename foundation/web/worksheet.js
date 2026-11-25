@@ -81,6 +81,7 @@ function reviewContent(d){
   for(const rule of d.rubric)rubric.append(el('li',rule));
   form.append(el('strong','Worked solution'),solution,el('div',d.answer,'review-answer'),el('strong','Proposed marking scheme · '+d.marks+' marks'),rubric,
     el('p',d.validation),el('small',d.spec+' · '+d.difficulty),el('small',(d.sources||[]).map(reference).join(' / ')));
+  if(d.difficulty_features)form.append(el('small','Difficulty design: '+d.difficulty_features));
   if(d.model_role)form.append(el('small','Model role: '+d.model_role));
   if(d.family)form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'));
   const actions=el('div',undefined,'queue-actions');
