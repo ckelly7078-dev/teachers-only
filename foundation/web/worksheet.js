@@ -1,12 +1,12 @@
 'use strict';
-// All data and decisions originate from the authenticated teacher API.
+// Generated questions are validated by the authenticated API; worksheet decisions live only in this page.
 let workspaceRows=[];
+let nextQuestionId=1;
 let workspaceReady=false;
 let workspaceBusy=false;
 let worksheetMode=null;
 const expandedReviews=new Set();
 const expandedRows=new Set();
-const pilotEdits=new Map();
 const stateLabels={draft:'Awaiting review',under_review:'Under review',approved:'Approved',discarded:'Discarded'};
 const pendingRows=()=>workspaceRows.filter(d=>d.state==='draft'||d.state==='under_review');
 const approvedRows=()=>workspaceRows.filter(d=>d.state==='approved');
@@ -22,18 +22,24 @@ function updateWorkspaceControls(){
   const pending=pendingRows().length, approved=approvedRows().length;
   const ready=workspaceReady&&!workspaceBusy&&!pending&&approved>0;
   for(const id of ['worksheet-preview-btn','worksheet-export-btn','scheme-export-btn'])byId(id).disabled=!ready;
-  byId('worksheet-gate').textContent=!workspaceReady?'Loading saved questions…':workspaceBusy?'Working on your questions…':pending?`${pending} question${pending===1?'':'s'} still need a decision. Approve or discard every pending question to unlock worksheet export.`:!approved?'Approve at least one question to build a worksheet.':'All questions have been decided. Your worksheet is ready to preview or export.';
+  byId('worksheet-gate').textContent=!workspaceReady?'Preparing an empty worksheet…':workspaceBusy?'Working on your questions…':pending?`${pending} question${pending===1?'':'s'} still need a decision. Approve or discard every pending question to unlock worksheet export.`:!approved?'Approve at least one question to build a worksheet.':'All questions have been decided. Your worksheet is ready to preview or export.';
 }
 async function workspaceTask(action){
   if(workspaceBusy)throw Error('Another question operation is in progress.');
   workspaceBusy=true;updateWorkspaceControls();
   try{return await action();}finally{workspaceBusy=false;updateWorkspaceControls();}
 }
+function addWorkspaceRows(rows){
+  if(!Array.isArray(rows)||rows.some(d=>!d||typeof d.question!=='string'||!Number.isInteger(d.marks)||d.marks<1))throw Error('Invalid generated questions.');
+  workspaceRows.push(...rows.map(d=>({...d,id:nextQuestionId++,state:'draft'})));
+}
 async function refreshWorkspace(){
-  workspaceReady=false;updateWorkspaceControls();
-  const rows=await api('workspace');
-  if(!Array.isArray(rows)||rows.some(d=>!Object.hasOwn(stateLabels,d.state)))throw Error('Invalid saved question state.');
-  workspaceRows=rows;workspaceReady=true;clearWorksheetPreview();renderWorkspace();
+  workspaceReady=true;clearWorksheetPreview();renderWorkspace();
+}
+function resetWorkspace(){
+  workspaceRows=[];nextQuestionId=1;expandedReviews.clear();expandedRows.clear();
+  byId('worksheet-title').value='';
+  return refreshWorkspace();
 }
 function statusPill(state){return el('span',stateLabels[state],'queue-status status-'+state);}
 function rowSummary(d){
@@ -44,35 +50,32 @@ function rowSummary(d){
   return head;
 }
 function queueButton(label,action,style){const b=button(label,action);if(style)b.classList.add(style);return b;}
+const temporaryTransitions={draft:['under_review','discarded'],under_review:['discarded','draft'],approved:['under_review','discarded'],discarded:['draft']};
 async function decision(d,target){
   await workspaceTask(async()=>{
-    try{
-      await api('decision',{id:d.id,expected:d.state,state:target},true);
-      if(target==='under_review')expandedReviews.add(d.id);
-      else expandedReviews.delete(d.id);
-      expandedRows.delete(d.id);
-      if(target!=='under_review')pilotEdits.delete(d.id);
-      await refreshWorkspace();
-      statusText('Question #'+d.id+' · '+stateLabels[target]);
-      if(target==='under_review')byId('question-'+d.id)?.scrollIntoView({block:'nearest'});
-    }catch(error){await refreshWorkspace().catch(()=>{});throw error;}
+    const row=workspaceRows.find(r=>r.id===d.id);
+    if(!row||row.state!==d.state||!temporaryTransitions[row.state]?.includes(target))throw Error('Question changed. Select the current question.');
+    workspaceRows=workspaceRows.map(r=>r.id===d.id?{...r,state:target}:r);
+    if(target==='under_review')expandedReviews.add(d.id);else expandedReviews.delete(d.id);
+    expandedRows.delete(d.id);
+    await refreshWorkspace();
+    statusText('Question #'+d.id+' · '+stateLabels[target]);
+    if(target==='under_review')byId('question-'+d.id)?.scrollIntoView({block:'nearest'});
   });
 }
-async function approveQuestion(d,question){
+async function approveQuestion(d){
   await workspaceTask(async()=>{
-    try{
-      await api('approve',{id:d.id,expected:d.state,question},true);
-      expandedReviews.delete(d.id);expandedRows.delete(d.id);pilotEdits.delete(d.id);
-      await refreshWorkspace();statusText('Question #'+d.id+' approved and added to your worksheet.');
-    }catch(error){await refreshWorkspace().catch(()=>{});throw error;}
+    const row=workspaceRows.find(r=>r.id===d.id);
+    if(!row||row.state!=='under_review'||d.state!==row.state)throw Error('Question must be under review before approval.');
+    workspaceRows=workspaceRows.map(r=>r.id===d.id?{...r,state:'approved'}:r);
+    expandedReviews.delete(d.id);expandedRows.delete(d.id);
+    await refreshWorkspace();statusText('Question #'+d.id+' approved and added to this temporary worksheet.');
   });
 }
 function reviewContent(d){
   const form=el('div',undefined,'stack review-content');
   form.append(examPreview(d));
-  const prompt=d.family||d.state!=='under_review'?null:field(form,'Edit pilot question (teacher must check the answer)', 'textarea',pilotEdits.get(d.id)??d.question);
-  if(prompt)prompt.oninput=()=>pilotEdits.set(d.id,prompt.value);
-  if(d.family)form.append(el('small','Question wording is locked to the validated solution. Regenerate to change it.'));
+  form.append(el('small','Question wording is locked to the validated solution. Regenerate to change it.'));
   const solution=el('ol'),rubric=el('ul');
   for(const step of d.solution)solution.append(el('li',step));
   for(const rule of d.rubric)rubric.append(el('li',rule));
@@ -81,7 +84,7 @@ function reviewContent(d){
   if(d.model_role)form.append(el('small','Model role: '+d.model_role));
   if(d.family)form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'));
   const actions=el('div',undefined,'queue-actions');
-  if(d.state==='under_review')actions.append(queueButton('Approve question',()=>approveQuestion(d,prompt?prompt.value:d.question),'approve-action'),queueButton('Discard',()=>decision(d,'discarded'),'discard-action'));
+  if(d.state==='under_review')actions.append(queueButton('Approve question',()=>approveQuestion(d),'approve-action'),queueButton('Discard',()=>decision(d,'discarded'),'discard-action'));
   if(d.state==='approved')actions.append(queueButton('Return to review',()=>decision(d,'under_review'),'secondary-action'),queueButton('Remove from worksheet',()=>decision(d,'discarded'),'discard-action'));
   form.append(actions);return form;
 }
@@ -144,6 +147,9 @@ function initWorksheet(){
   byId('worksheet-export-btn').onclick=()=>run(()=>prepareWorksheet('student',true));
   byId('scheme-export-btn').onclick=()=>run(()=>prepareWorksheet('scheme',true));
   byId('worksheet-title').oninput=()=>{if(worksheetMode&&!byId('worksheet-preview').hidden)byId('worksheet-preview').replaceChildren(makeWorksheet(approvedRows(),worksheetMode));};
-  byId('workspace-reload').onclick=()=>run(()=>workspaceTask(refreshWorkspace));
+  byId('workspace-reload').onclick=()=>run(()=>workspaceTask(async()=>{
+    if(workspaceRows.length&&!window.confirm('Clear all questions in this temporary worksheet? This cannot be undone.'))return;
+    await resetWorkspace();statusText('Temporary worksheet cleared.');
+  }));
   return refreshWorkspace();
 }
