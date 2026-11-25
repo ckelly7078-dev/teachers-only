@@ -9,3 +9,7 @@ student-data/
 *.sqlite*
 *.pdf
 .DS_Store
+*.py[cod]
+*.zip
+private-data/
+teacher-users.json
