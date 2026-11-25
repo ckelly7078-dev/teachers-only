@@ -194,7 +194,7 @@ onForm('studio',async args=>{
   const wrap=byId('studio-results'); wrap.replaceChildren();
   for(const d of rows){
     const card=el('article');
-    card.append(el('h3',d.label),el('p',d.question),el('small',d.marks+' marks · '+d.difficulty),
+    card.append(el('h3',d.label),el('p',d.question),el('small',d.unit+' · '+d.marks+' marks · '+d.difficulty),
       el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
       button('Review draft',()=>{showDraft(d); byId('draft').scrollIntoView({block:'start'});}));
     wrap.append(card);
@@ -208,7 +208,7 @@ onForm('generate',async args=>{
 });
 function showDraft(d) {
   const wrap=byId('draft'), form=el('div',undefined,'stack');
-  wrap.replaceChildren(el('h3',d.label),form);
+  wrap.replaceChildren(el('h3',d.label),el('small',d.unit+' · '+d.state),form);
   const prompt=field(form,'Practice question','textarea',d.question);
   if(d.family){prompt.readOnly=true; form.append(el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
   const solution=el('ol'), rubric=el('ul');
