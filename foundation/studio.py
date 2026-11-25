@@ -4,6 +4,7 @@ import sqlite3
 from fractions import Fraction
 from math import gcd, lcm
 from pathlib import Path
+from . import contextual
 
 # family: label, origin unit, exact skill ID, supported units
 FAMILIES = {
@@ -21,6 +22,7 @@ FAMILIES = {
     'nth-term': ('Linear nth term', 'M6', 'm6-nth-term', ('M6',)),
     'indices': ('Product of powers', 'M6', 'm6-algebra-indices', ('M6',)),
 }
+FAMILIES.update(contextual.FAMILIES)
 UNITS = ('M1','M2','M5','M6')
 DIFFICULTIES = ('easy','standard','challenge')
 
@@ -68,6 +70,8 @@ def catalog(path, unit):
 
 def build(family, a, b, c):
     """Return original prompt, canonical answer, steps, proposed per-mark rubric."""
+    if family in contextual.FAMILIES:
+        return contextual.build(family,a,b,c)
     if family == 'percent':
         p,total=5*a,20*b; ans=p*total//100
         return f'Find {p}% of {total}.',ans,[f'{p}/100 x {total} = {ans}.'],['M1: multiply by the percentage as a fraction or decimal.','A1: correct amount.']
@@ -114,6 +118,7 @@ def build(family, a, b, c):
 
 def validate(family,a,b,c,ans):
     """Independent inverse checks, enumeration and place-value reconstruction."""
+    if family in contextual.FAMILIES: return contextual.validate(family,a,b,c,ans)
     if family=='percent': return Fraction(ans,20*b)==Fraction(a,20)
     if family=='fraction': return Fraction(ans,(a+c)*b)==Fraction(a,a+c)
     if family=='equation': return a*ans+c==a*b+c
@@ -140,6 +145,7 @@ def validate(family,a,b,c,ans):
 
 
 def display(family,answer):
+    if family in contextual.FAMILIES: return contextual.display(family,answer)
     if family=='nth-term':
         m,k=answer
         return f'{m}n'+(f' + {k}' if k>0 else f' - {-k}' if k<0 else '')
@@ -168,6 +174,7 @@ def generate(path,unit,family,difficulty='standard',count=1,seed=None):
         seen.add(q)
         questions.append(dict(label=FAMILIES[family][0]+' - original practice',unit=unit,tier='Foundation',
             family=family,question=q,answer=display(family,ans),solution=steps,rubric=rubric,marks=len(rubric),
+            diagram=contextual.diagram(family,a,b,c),
             mode='local',difficulty=difficulty+' (parameter range; not calibrated)',calculator='Not required by this template',
             spec=f'CCEA GCSE Mathematics (2017), section 3.1, p. {meta["spec_page"]}',
             validation='Independent numeric check passed; wording and proposed rubric require teacher review',**meta))
