@@ -42,4 +42,30 @@ class PromptTest(unittest.TestCase):
             with self.assertRaises(studio_ai.StudioAIUnavailable):prompt.accept(response(invalid),'M1',families)
         with self.assertRaises(studio_ai.StudioAIUnavailable):prompt.accept({'status':'incomplete'},'M1',families)
 
+    def test_builtin_example_schema_and_fallback(self):
+        from test_studio import StudioTest
+        fixture=StudioTest();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        q=plan()['questions'][0]
+        valid=plan(count=3,questions=[dict(q,a=a) for a in (8,9,10)])
+        invalid=plan(count=3,questions=[q]*3)
+        with patch.dict(os.environ,{'OPENAI_API_KEY':'fake-test-only','KB_STUDIO_MODEL':'gpt-4.1'}):
+            with patch.object(studio_ai,'send',return_value=response(valid)) as send:
+                rows=prompt.author(fixture.path,'M1',prompt.SHOPPING_EXAMPLE)
+                self.assertEqual(len(rows),3)
+                self.assertTrue(all(r['mode']=='model' and r['marks']==4 for r in rows))
+                schema=send.call_args.args[0]['text']['format']['schema']['properties']
+                self.assertEqual(schema['count']['enum'],[3])
+                self.assertEqual(schema['requested_marks']['enum'],[4])
+                self.assertEqual(schema['questions']['items']['properties']['family']['enum'],['shopping-discount'])
+                self.assertEqual(schema['questions']['items']['properties']['a']['enum'],list(range(4,13)))
+            for failure in (response(invalid),response(plan()),response(plan(supported=False,questions=[],reason='declined')),{'status':'incomplete'}):
+                with patch.object(studio_ai,'send',return_value=failure) as send:
+                    rows=prompt.author(fixture.path,'M1',prompt.SHOPPING_EXAMPLE)
+                    self.assertEqual(send.call_count,1)
+                    self.assertEqual(len({r['question'] for r in rows}),3)
+                    self.assertTrue(all(r['mode']=='local' and r['marks']==4 and 'locally instead' in r['generation_notice'] for r in rows))
+            with patch.object(studio_ai,'send',return_value=response(invalid)):
+                with self.assertRaisesRegex(prompt.InvalidPlan,'duplicate questions'):
+                    prompt.author(fixture.path,'M1','Three four-mark shopping questions')
+
 if __name__=='__main__':unittest.main()
