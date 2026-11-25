@@ -89,10 +89,10 @@ def diagram(family,a,b,c):
     """JSON geometry primitives; coordinates are schematic, never answer data."""
     if family=='l-shape':
         return dict(kind='schematic',alt='L-shaped floor with labelled outer rectangle and removed upper-right corner.',polygon=[[65,45],[235,45],[235,120],[405,120],[405,240],[65,240]],
-                    lines=[],labels=[[235,264,f'{a+b} m (full width)'],[33,148,f'{b+c} m'],[320,105,f'{b} m'],[243,82,f'{c} m']])
+                    lines=[],labels=[[235,264,f'{a+b} m (full width)'],[33,148,f'{b+c} m'],[320,105,f'{b} m'],[265,82,f'{c} m']])
     if family=='trapezium':
         return dict(kind='schematic',alt='Trapezium with both parallel sides and perpendicular height labelled.',polygon=[[135,50],[335,50],[405,225],[65,225]],
-                    lines=[[135,50,135,225],[135,210,150,210],[150,210,150,225]],labels=[[235,32,f'{2*a} m'],[235,248,f'{2*(a+b)} m'],[151,142,f'{c} m']])
+                    lines=[[135,50,135,225],[135,210,150,210],[150,210,150,225]],labels=[[235,32,f'{2*a} m'],[235,248,f'{2*(a+b)} m'],[166,142,f'{c} m']])
     if family=='pythagoras':
         return dict(kind='schematic',alt='Rectangular frame with width, height and unknown diagonal brace.',polygon=[[95,45],[375,45],[375,235],[95,235]],
                     lines=[[95,235,375,45],[95,220,110,220],[110,220,110,235]],labels=[[235,256,f'{3*a} m'],[52,140,f'{4*a} m'],[248,96,'brace']])
