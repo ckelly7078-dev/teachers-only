@@ -9,7 +9,7 @@ const topicKey=(unit,family)=>unit+':'+family;
 function builderSelection(){
   return {units:selectedBuilderUnits(),topics:[...builderTopics.values()],count:Number(byId('builder-count').value),
     difficulty:byId('builder-difficulty').value,mode:byId('builder-mode').value,
-    info:byId('builder-mode').value==='model'?byId('builder-info').value.trim():''};
+    info:byId('builder-mode').value!=='local'?byId('builder-info').value.trim():''};
 }
 function builderProblem(s){
   if(builderLoading)return 'Loading available topics…';
@@ -67,9 +67,9 @@ function updateBuilderControls(){
   byId('builder-unit-summary').textContent=s.units.length?s.units.join(', '):'Choose units';
   byId('builder-topic-summary').textContent=s.topics.length?s.topics.length+' topic'+(s.topics.length===1?'':'s')+' selected':'Choose topics';
   byId('builder-count').min=String(Math.max(1,s.topics.length));
-  byId('builder-info').disabled=builderBusy||s.mode!=='model';
+  byId('builder-info').disabled=builderBusy||s.mode==='local';
   byId('builder-ai-option').disabled=!builderAI;
-  byId('builder-info-help').textContent=s.mode==='model'?'Optional: guide emphasis, numerical choices and available wording variants. Unsupported features may not be possible. Do not include pupil data.':'Optional guidance is only used in AI mode. Local generation costs nothing.';
+  byId('builder-info-help').textContent=s.mode==='hybrid'?'Hybrid: AI guidance applies only to questions with diagrams. Text-only questions use no API. Diagram artwork is drawn by the maths engine. Do not include pupil data.':s.mode==='model'?'Optional: guide emphasis, numerical choices and available wording variants. Unsupported features may not be possible. Do not include pupil data.':'Optional guidance is only used in AI mode. Local generation costs nothing.';
   byId('builder-gate').textContent=error||`${s.count} questions · ${s.units.length} unit${s.units.length===1?'':'s'} · ${s.topics.length} selected topic${s.topics.length===1?'':'s'}. Each selected topic will be represented.`;
   byId('builder-submit').disabled=builderBusy||!!error;
   for(const id of ['builder-count','builder-difficulty','builder-mode'])byId(id).disabled=builderBusy;
@@ -81,8 +81,8 @@ function updateBuilderControls(){
 }
 function configureBuilderAI(available){
   builderAI=!!available;
-  if(!builderConfigured){byId('builder-mode').value=builderAI?'model':'local';builderConfigured=true;}
-  if(!builderAI)byId('builder-mode').value='local';
+  if(!builderConfigured){byId('builder-mode').value=builderAI?'hybrid':'local';builderConfigured=true;}
+  if(!builderAI&&byId('builder-mode').value==='model')byId('builder-mode').value='local';
   updateBuilderControls();
 }
 function renderBuilderTopics(units){
@@ -143,7 +143,7 @@ async function initBuilder(){
       const settings=builderSelection(), problem=builderProblem(settings);
       if(problem||builderBusy)throw Error(problem||'Generation already in progress.');
       builderBusy=true;updateBuilderControls();
-      const feedback=byId('builder-feedback');feedback.textContent=settings.mode==='model'?'AI is designing and checking your selected topics…':'Generating and checking your selected topics…';
+      const feedback=byId('builder-feedback');feedback.textContent=settings.mode==='hybrid'?'Generating text questions locally and using AI only for diagram topics…':settings.mode==='model'?'AI is designing and checking your selected topics…':'Generating and checking your selected topics…';
       try{
         await workspaceTask(async()=>{
           const rows=await api('studio-mixed',settings,true);
