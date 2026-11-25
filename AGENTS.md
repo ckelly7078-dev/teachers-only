@@ -8,3 +8,7 @@
 - Current baseline smoke test: role screen one button, sign-in, dashboard nine tiles, all nine module routes render with back navigation, invalid student route rejected. This is a mocked DOM test, not a full browser test.
 
 - Preserve local storage key `scc-teacher-workspace-v1` and shared class, pupil, resource and assignment ID relationships. Scores are manually recorded percentages, not AI grades. Run `node tests/smoke.cjs` and browser tests before releases.
+
+## Foundation curriculum work
+
+The Foundation scope is M1, M2, M5 and M6. M1 is the reference implementation. Consult foundation/README.md and the private checkpoint before another ingestion run. Store originals and SQLite volumes outside the checkout and web root. Keep the existing static demo usable. The dedicated teacher service supplies verified records at runtime. Run the existing smoke suite and the Python integration suite when changing this path. Treat source-checked annotations, machine-suggested classifications and teacher approval as distinct states. Continue verification in M1 before rolling out question extraction in another unit.
