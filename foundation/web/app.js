@@ -197,6 +197,8 @@ onForm('studio',async args=>{
     card.append(el('h3',d.label),el('p',d.question),el('small',d.unit+' · '+d.marks+' marks · '+d.difficulty),
       el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
       button('Review draft',()=>{showDraft(d); byId('draft').scrollIntoView({block:'start'});}));
+    const diagram=renderStudioDiagram(d.diagram);
+    if(diagram) card.insertBefore(diagram,card.lastChild);
     wrap.append(card);
   }
   statusText(rows.length+' validated drafts saved for teacher review.');
@@ -211,6 +213,9 @@ function showDraft(d) {
   wrap.replaceChildren(el('h3',d.label),el('small',d.unit+' · '+d.state),form);
   const prompt=field(form,'Practice question','textarea',d.question);
   if(d.family){prompt.readOnly=true; form.append(el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
+  if(d.family && d.question.includes('(b)')) prompt.rows=6;
+  const diagram=renderStudioDiagram(d.diagram);
+  if(diagram) form.append(diagram);
   const solution=el('ol'), rubric=el('ul');
   for(const step of d.solution) solution.append(el('li',step));
   for(const rule of d.rubric) rubric.append(el('li',rule));
