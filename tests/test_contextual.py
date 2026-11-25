@@ -28,12 +28,9 @@ class ContextualTest(unittest.TestCase):
                 else: self.assertIsNone(d)
 
     def test_known_examples(self):
-        expected={'discount-budget':(2870,1030),'l-shape':(31,217),'trapezium':(50,200),
+        expected={'discount-budget':(2250,850),'l-shape':(25,175),'trapezium':(35,140),
                   'pythagoras':(10,80),'map-scale':(25,50),'expected-frequency':(Fraction(4,5),40),'gradient':(Fraction(2,3),5)}
         # Independently calculate each fixture for a=2, b=3, c=5.
-        expected['discount-budget']=(2250,850)
-        expected['l-shape']=(25,175)
-        expected['trapezium']=(35,140)
         for family,answer in expected.items():
             self.assertEqual(ctx.build(family,2,3,5)[1],answer,family)
             self.assertIn(family,FAMILIES)
