@@ -22,6 +22,7 @@ API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
           '/foundation/web/index.html':(HERE/'web/index.html','text/html'),
           '/foundation/web/app.js':(HERE/'web/app.js','text/javascript'),
+          '/foundation/web/diagrams.js':(HERE/'web/diagrams.js','text/javascript'),
           '/foundation/web/style.css':(HERE/'web/style.css','text/css')}
 
 
