@@ -97,7 +97,7 @@ def ai_batch(choices, count, difficulty, info):
         sample = make_question((u, f, entry), difficulty, lo, lo, lo)
         options.append(dict(topic=i, unit=u, family=f, label=entry['label'], marks=sample['marks'],
                             diagram=bool(sample.get('diagram')), parameters=('For composites, a,b,c are seeds for strip widths 6 + seed mod 5, base height 5 + c mod 4, and steps 3 + seed mod 3. Hard shape profile is chosen by a mod 4.' if f=='l-shape' else PARAMETERS.get(f,'Bounded numerical seeds')),
-                            difficulty_features=sample['difficulty_features'],
+                            difficulty_features=sample.get('difficulty_features','Independent application of the selected skill.'),
                             layouts=(list(geometry.LAYOUTS) if sample.get('diagram') else [0]),
                             wording_examples=wording_options(sample)))
     item = {'type':'object','additionalProperties':False,'required':['topic','a','b','c','wording','layout'],
