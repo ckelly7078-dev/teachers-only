@@ -86,4 +86,53 @@ class StudioAITest(unittest.TestCase):
             with self.assertRaisesRegex(ai.StudioAIUnavailable,'AI service unavailable'): ai.send({})
         self.assertIsNone(ai.NoRedirect().redirect_request(None,None,302,None,None,'https://other.invalid'))
 
+    def test_authenticated_http_persistence_and_fail_closed(self):
+        import base64
+        import io
+        import sqlite3
+        from contextlib import closing
+        from foundation.server import application, credentials
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.executescript("""CREATE TABLE state(id INTEGER,summary TEXT);
+            INSERT INTO state VALUES(1,'[]');
+            CREATE TABLE practice_drafts(id INTEGER PRIMARY KEY,owner TEXT,data TEXT,state TEXT DEFAULT 'draft',approved TEXT);""")
+        users=self.path.parent/'users.json'
+        users.write_text(json.dumps([credentials('Teacher A','fake-a'),credentials('Teacher B','fake-b')]))
+        def request(route,body=None,who='A',header=True):
+            raw=json.dumps(body).encode() if body is not None else b''
+            token='Basic '+base64.b64encode(f'Teacher {who}:fake-{who.lower()}'.encode()).decode() if who else ''
+            env={'PATH_INFO':'/api/foundation/'+route,'REQUEST_METHOD':'POST' if body is not None else 'GET',
+                 'HTTP_AUTHORIZATION':token,'CONTENT_TYPE':'application/json','CONTENT_LENGTH':str(len(raw)),
+                 'QUERY_STRING':'','wsgi.input':io.BytesIO(raw)}
+            if header: env['HTTP_X_KB_REQUEST']='teacher'
+            status=[]; result=b''.join(application(env,lambda s,h:status.append(s)))
+            return int(status[0][:3]),json.loads(result)
+        args={'unit':'M2','family':'pythagoras','count':2,'mode':'model'}
+        with patch.dict(os.environ,{'KB_DB':str(self.path),'KB_USERS':str(users)}),patch.object(ai,'send') as send:
+            self.assertEqual(request('studio',args,who=None)[0],401)
+            self.assertEqual(request('studio',args,header=False)[0],415)
+            self.assertEqual(request('studio',dict(args,mode='bad'))[0],400)
+            with patch.dict(os.environ,{'OPENAI_API_KEY':''}):
+                self.assertFalse(request('summary')[1]['studio_ai_configured'])
+                self.assertEqual(request('studio',args)[0],503)
+                self.assertEqual(request('drafts')[1],[])
+                self.assertEqual(request('studio',dict(args,mode='local'))[0],200)
+                send.assert_not_called()
+            self.assertTrue(request('summary')[1]['studio_ai_configured'])
+            send.return_value=response([{'id':0,'variant':0}]*2)
+            self.assertEqual(request('studio',args)[0],503)
+            self.assertEqual(len(request('drafts')[1]),2)
+            send.return_value=response([{'id':0,'variant':1},{'id':1,'variant':0}])
+            code,rows=request('studio',args)
+            self.assertEqual(code,200); self.assertEqual(len(rows),2)
+            self.assertTrue(all(r['mode']=='model' and r['diagram'] for r in rows))
+            self.assertEqual(len(request('drafts')[1]),4)
+            self.assertEqual(request('drafts',who='B')[1],[])
+            draft=rows[0]
+            approval={'id':draft['id'],'question':draft['question']}
+            self.assertEqual(request('approve',approval,who='B')[0],409)
+            self.assertEqual(request('approve',dict(approval,question='Altered'))[0],409)
+            self.assertEqual(request('approve',approval)[1]['state'],'approved')
+            self.assertEqual(send.call_count,2)
+
 if __name__=='__main__': unittest.main()
