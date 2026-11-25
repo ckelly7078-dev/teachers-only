@@ -25,23 +25,23 @@ def build(family,a,b,c):
     if family=='discount-budget':
         price=2000+100*a*b; p=5*c; saving=price*p//100; delivery=100*b
         budget=price+delivery+100*a; paid=price-saving+delivery; left=budget-paid
-        return (f'A club has a budget of GBP {cash(budget)}. A kit costs GBP {cash(price)} before a {p}% discount. Delivery costs GBP {cash(delivery)} and is not discounted. (a) Find the total paid including delivery. (b) Find the money left in the budget.',
-                (paid,left),[f'Discount = {p}/100 x GBP {cash(price)} = GBP {cash(saving)}.',f'Amount paid = GBP {cash(price)} - GBP {cash(saving)} + GBP {cash(delivery)} = GBP {cash(paid)}.',f'Money left = GBP {cash(budget)} - GBP {cash(paid)} = GBP {cash(left)}.'],
+        return (f'A club has a budget of £{cash(budget)}. A kit costs £{cash(price)} before a {p}% discount. Delivery costs £{cash(delivery)} and is not discounted. (a) Find the total paid including delivery. (b) Find the money left in the budget.',
+                (paid,left),[f'Discount = {p}/100 x £{cash(price)} = £{cash(saving)}.',f'Amount paid = £{cash(price)} - £{cash(saving)} + £{cash(delivery)} = £{cash(paid)}.',f'Money left = £{cash(budget)} - £{cash(paid)} = £{cash(left)}.'],
                 ['(a) M1: calculate the discount or apply the remaining percentage.','(a) M1: include delivery after discount.','(a) A1: correct total paid.','(b) A1: correct balance; follow through a valid subtraction using part (a).'])
     if family=='l-shape':
         w,h=a+b,b+c; area=w*h-b*c; rate=c+2; cost=area*rate
-        return (f'An L-shaped floor is made by removing a {b} m by {c} m corner from a {w} m by {h} m rectangle (see diagram). Flooring costs GBP {rate} per square metre. (a) Find the floor area. (b) Find the flooring cost, ignoring waste.',(area,cost),
-                [f'Outer area = {w} x {h} = {w*h} m^2.',f'Remove {b} x {c} = {b*c} m^2; floor area = {area} m^2.',f'Cost = {area} x GBP {rate} = GBP {cost}.'],
+        return (f'An L-shaped floor is made by removing a {b} m by {c} m corner from a {w} m by {h} m rectangle (see diagram). Flooring costs £{rate} per square metre. (a) Find the floor area. (b) Find the flooring cost, ignoring waste.',(area,cost),
+                [f'Outer area = {w} x {h} = {w*h} m^2.',f'Remove {b} x {c} = {b*c} m^2; floor area = {area} m^2.',f'Cost = {area} x £{rate} = £{cost}.'],
                 ['(a) M1: calculate outer and removed areas, or split the L shape into rectangles.','(a) M1: subtract the removed area, or add non-overlapping areas.','(a) A1: correct floor area.','(b) A1: correct cost; follow through a valid multiplication of part (a).'])
     if family=='trapezium':
         top=2*a; bottom=2*(a+b); height=c; area=(top+bottom)*height//2; rate=b+1
-        return (f'A trapezium-shaped garden has parallel sides {top} m and {bottom} m and perpendicular height {height} m (see diagram). Turf costs GBP {rate} per square metre. (a) Find its area. (b) Find the turf cost, ignoring waste.',(area,area*rate),
-                [f'Area = ({top} + {bottom}) x {height} / 2 = {area} m^2.',f'Cost = {area} x GBP {rate} = GBP {area*rate}.'],
+        return (f'A trapezium-shaped garden has parallel sides {top} m and {bottom} m and perpendicular height {height} m (see diagram). Turf costs £{rate} per square metre. (a) Find its area. (b) Find the turf cost, ignoring waste.',(area,area*rate),
+                [f'Area = ({top} + {bottom}) x {height} / 2 = {area} m^2.',f'Cost = {area} x £{rate} = £{area*rate}.'],
                 ['(a) M1: add the two parallel sides and multiply by perpendicular height.','(a) M1: divide by 2 or use an equivalent decomposition.','(a) A1: correct area.','(b) A1: correct cost; follow through a valid multiplication of part (a).'])
     if family=='pythagoras':
         x,y=3*a,4*a; length=5*a; rate=b+c
-        return (f'A rectangular frame is {x} m wide and {y} m high. A straight brace runs from one corner to the opposite corner (see diagram). The brace material costs GBP {rate} per metre. (a) Find the length of the brace. (b) Find the material cost.',(length,length*rate),
-                [f'Brace length squared = {x}^2 + {y}^2 = {x*x+y*y}.',f'Length = sqrt({x*x+y*y}) = {length} m.',f'Cost = {length} x GBP {rate} = GBP {length*rate}.'],
+        return (f'A rectangular frame is {x} m wide and {y} m high. A straight brace runs from one corner to the opposite corner (see diagram). The brace material costs £{rate} per metre. (a) Find the length of the brace. (b) Find the material cost.',(length,length*rate),
+                [f'Brace length squared = {x}^2 + {y}^2 = {x*x+y*y}.',f'Length = sqrt({x*x+y*y}) = {length} m.',f'Cost = {length} x £{rate} = £{length*rate}.'],
                 ['(a) M1: use Pythagoras with the two perpendicular sides.','(a) M1: take the positive square root of their squared sum.','(a) A1: correct length.','(b) A1: correct cost; follow through a valid multiplication of part (a).'])
     if family=='map-scale':
         scale=c; outward=(a+b)*scale
@@ -55,7 +55,7 @@ def build(family,a,b,c):
                 ['(a) M1: use non-red count over total, or one minus probability of red.','(a) A1: correct probability in simplest form.','(b) M1: multiply number of draws by the probability.','(b) A1: correct expected frequency; follow through a valid probability from part (a).'])
     if family=='gradient':
         rise=a; run=b; intercept=c; m=Fraction(rise,run)
-        return (f'A straight line passes through (0, {intercept}) and ({run}, {intercept+rise}). (a) Find its gradient as a fraction in simplest form. (b) State the y-coordinate where it crosses the y-axis.',(m,intercept),
+        return (f'A straight line passes through (0, {intercept}) and ({run}, {intercept+rise}). (a) Find its gradient. Give an exact answer, simplifying any fraction. (b) State the y-coordinate where it crosses the y-axis.',(m,intercept),
                 [f'Rise = {intercept+rise} - {intercept} = {rise}; run = {run} - 0 = {run}.',f'Gradient = {rise}/{run} = {m}.',f'When x = 0, y = {intercept}.'],
                 ['(a) M1: divide change in y by change in x.','(a) A1: correct gradient in simplest form.','(b) B1: correct y-intercept coordinate.'])
     raise ValueError('Unknown contextual family')
@@ -78,9 +78,9 @@ def validate(family,a,b,c,answer):
 
 def display(family,answer):
     x,y=answer
-    if family=='discount-budget': return f'(a) GBP {cash(x)}; (b) GBP {cash(y)}'
-    if family in ('l-shape','trapezium'): return f'(a) {x} m^2; (b) GBP {y}'
-    if family=='pythagoras': return f'(a) {x} m; (b) GBP {y}'
+    if family=='discount-budget': return f'(a) £{cash(x)}; (b) £{cash(y)}'
+    if family in ('l-shape','trapezium'): return f'(a) {x} m^2; (b) £{y}'
+    if family=='pythagoras': return f'(a) {x} m; (b) £{y}'
     if family=='map-scale': return f'(a) {x} km; (b) {y} km'
     return f'(a) {x}; (b) {y}'
 
@@ -95,5 +95,5 @@ def diagram(family,a,b,c):
                     lines=[[135,50,135,225],[135,210,150,210],[150,210,150,225]],labels=[[235,32,f'{2*a} m'],[235,248,f'{2*(a+b)} m'],[166,142,f'{c} m']])
     if family=='pythagoras':
         return dict(kind='schematic',alt='Rectangular frame with width, height and unknown diagonal brace.',polygon=[[95,45],[375,45],[375,235],[95,235]],
-                    lines=[[95,235,375,45],[95,220,110,220],[110,220,110,235]],labels=[[235,256,f'{3*a} m'],[52,140,f'{4*a} m'],[248,96,'brace']])
+                    lines=[[95,235,375,45],[360,235,360,220],[360,220,375,220]],labels=[[235,256,f'{3*a} m'],[52,140,f'{4*a} m'],[248,96,'brace']])
     return None
