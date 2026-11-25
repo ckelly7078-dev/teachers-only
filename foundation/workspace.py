@@ -4,6 +4,7 @@ Uses the existing practice_drafts table; no source-knowledge records or schema
 migration are required. State is persisted independently of browser sessions.
 """
 import json
+import re
 from .review import Conflict, bounded_text
 
 STATES = ('draft', 'under_review', 'approved', 'discarded')
@@ -19,10 +20,44 @@ def public_row(row):
     return dict(json.loads(row['data']), id=row['id'], state=row['state'])
 
 
-def queue(db, actor):
-    # Ascending creation order gives stable worksheet numbering across batches.
-    return [public_row(r) for r in db.execute(
-        'SELECT id,state,data FROM practice_drafts WHERE owner=? ORDER BY id', (actor,))]
+WORKSHEET = re.compile(r'(?:general|class-[1-9][0-9]{0,15}):[0-9a-f]{32}')
+
+def worksheet_key(value):
+    if value == 'legacy' or (isinstance(value, str) and WORKSHEET.fullmatch(value)):
+        return value
+    raise ValueError('Invalid worksheet identifier')
+
+
+def tag_rows(rows, data):
+    if 'worksheet' not in data:
+        return rows
+    key = worksheet_key(data['worksheet'])
+    return [dict(row, worksheet_id=key) for row in rows]
+
+
+def row_worksheet(row):
+    return json.loads(row['data']).get('worksheet_id') or 'legacy'
+
+
+def queue(db, actor, worksheet=None):
+    sql = 'SELECT id,state,data FROM practice_drafts WHERE owner=?'
+    params = [actor]
+    if worksheet is not None:
+        sql += " AND coalesce(json_extract(data,'$.worksheet_id'),'legacy')=?"
+        params.append(worksheet_key(worksheet))
+    return [public_row(r) for r in db.execute(sql+' ORDER BY id', params)]
+
+
+def collections(db, actor):
+    rows = db.execute("""SELECT coalesce(json_extract(data,'$.worksheet_id'),'legacy') AS worksheet,
+        count(*) AS questions, sum(state='approved') AS approved, max(created) AS latest
+        FROM practice_drafts WHERE owner=? GROUP BY worksheet ORDER BY latest DESC, worksheet""", (actor,))
+    return [dict(row) for row in rows]
+
+
+def check_worksheet(row, data):
+    if 'worksheet' in data and row_worksheet(row) != worksheet_key(data['worksheet']):
+        raise Conflict('Question belongs to another worksheet. Reload before changing it.')
 
 
 def decide(db, actor, data):
@@ -34,6 +69,7 @@ def decide(db, actor, data):
         row = db.execute('SELECT id,state,data FROM practice_drafts WHERE id=? AND owner=?', (qid, actor)).fetchone()
         if not row or row['state'] != expected:
             raise Conflict('Question changed or is unavailable. Reload the workspace.')
+        check_worksheet(row, data)
         db.execute('UPDATE practice_drafts SET state=?, approved=NULL WHERE id=? AND owner=?', (target, qid, actor))
         return dict(public_row(row), state=target)
 
@@ -50,6 +86,7 @@ def approve(db, actor, data):
             raise Conflict('This draft is unavailable or already decided')
         if 'expected' in data and data['expected'] != row['state']:
             raise Conflict('Question changed. Reload the workspace.')
+        check_worksheet(row, data)
         practice = json.loads(row['data'])
         question = bounded_text(data['question'], 1500, 'question')
         if question != practice['question'] and practice.get('family'):
