@@ -21,6 +21,47 @@ function builderProblem(s){
   if(s.mode==='model'&&!builderAI)return 'AI is unavailable. Select local generation.';
   return '';
 }
+// Native disclosure/radio menus use page typography even when Firefox's
+// operating-system select popup is rendered with a much smaller font.
+const builderSingleMenus=new Map();
+function installBuilderSingleMenu(id){
+  const select=byId(id), original=select.parentElement;
+  const title=original.firstChild.textContent.trim();
+  const field=el('div',undefined,'builder-field builder-single-field');
+  const heading=el('span',title,'builder-label');
+  heading.id=id+'-label';
+  const details=el('details',undefined,'builder-dropdown builder-single-menu');
+  const summary=el('summary');summary.id=id+'-summary';
+  summary.setAttribute('aria-labelledby',heading.id+' '+summary.id);
+  const options=el('div',undefined,'builder-options');
+  options.setAttribute('role','radiogroup');options.setAttribute('aria-labelledby',heading.id);
+  const controls=[];
+  for(const option of select.options){
+    const label=el('label',undefined,'builder-choice');
+    const radio=el('input');radio.type='radio';radio.name=id+'-choice';radio.value=option.value;
+    radio.onchange=()=>{
+      if(!radio.checked)return;
+      select.value=radio.value;
+      updateBuilderControls();
+      details.open=false;
+      summary.focus();
+    };
+    label.append(radio,el('span',option.textContent));options.append(label);
+    controls.push({radio,option});
+  }
+  details.append(summary,options);field.append(heading,details);
+  original.replaceWith(field);select.hidden=true;select.tabIndex=-1;select.setAttribute('aria-hidden','true');field.append(select);
+  details.addEventListener('keydown',e=>{if(e.key==='Escape'){details.open=false;summary.focus();}});
+  builderSingleMenus.set(id,{select,details,summary,controls});
+}
+function syncBuilderSingleMenus(){
+  for(const {select,summary,controls} of builderSingleMenus.values()){
+    summary.textContent=select.selectedOptions[0]?.textContent||'Choose an option';
+    for(const {radio,option} of controls){
+      radio.checked=option.selected;radio.disabled=select.disabled||option.disabled;
+    }
+  }
+}
 function updateBuilderControls(){
   const s=builderSelection(), error=builderProblem(s);
   byId('builder-unit-summary').textContent=s.units.length?s.units.join(', '):'Choose units';
@@ -36,6 +77,7 @@ function updateBuilderControls(){
   for(const control of byId('builder-topic-options').querySelectorAll('input'))control.disabled=builderBusy||(!control.checked&&s.topics.length>=10);
   byId('builder-retry').hidden=!builderError;
   byId('builder-retry').disabled=builderBusy;
+  syncBuilderSingleMenus();
 }
 function configureBuilderAI(available){
   builderAI=!!available;
@@ -88,6 +130,9 @@ async function loadBuilderTopics(){
   }
 }
 async function initBuilder(){
+  installBuilderSingleMenu('builder-difficulty');
+  installBuilderSingleMenu('builder-mode');
+  syncBuilderSingleMenus();
   for(const c of byId('builder-unit-options').querySelectorAll('input'))c.onchange=()=>run(loadBuilderTopics);
   byId('builder-mode').onchange=updateBuilderControls;
   byId('builder-count').oninput=updateBuilderControls;
