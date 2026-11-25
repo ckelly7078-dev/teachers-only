@@ -2,7 +2,7 @@
 import json
 import os
 import random
-from . import studio, studio_ai, geometry
+from . import studio, studio_ai, geometry, difficulty as demand
 import re
 from itertools import product
 from .studio_prompt import DOMAINS, PARAMETERS
@@ -41,6 +41,8 @@ def design_request(path, data):
 
 def wording_options(row):
     """Only existing curated wording changes; no model-supplied prose."""
+    if row.get('difficulty_level') in ('easy','challenge') or row.get('family')=='l-shape':
+        return [row['question']]
     try:
         return studio_ai.variants(row)
     except (ValueError, KeyError):
@@ -50,16 +52,25 @@ def wording_options(row):
 def make_question(choice, difficulty, a, b, c, wording=0, layout=None):
     unit, family, entry = choice
     meta = {k: v for k, v in entry.items() if k not in ('family', 'label')}
-    row = studio.make_row(unit, family, difficulty, a, b, c, meta)
+    row = demand.adapt(studio.make_row(unit, family, difficulty, a, b, c, meta),difficulty,a,b,c,layout)
     if wording:
         variants = wording_options(row)
         if wording >= len(variants):
             raise ValueError('Unsupported wording variation.')
         row['question'] = variants[wording]
     if row.get('diagram'):
-        row['diagram'] = geometry.diagram(family,a,b,c,layout)
+        row['diagram'] = demand.diagram_for(family,difficulty,a,b,c,layout)
         row['_diagram_seed'] = (a,b,c,wording,geometry.default_layout(a,b,c) if layout is None else layout)
     return row
+
+
+def question_key(row):
+    # Diagram-based tasks may have identical instructions with different data.
+    # Compare their mathematical data and answer, not the wording alone;
+    # orientation or purely cosmetic changes do not create a new question.
+    measures=(row.get('diagram') or {}).get('measurements',[])
+    dims=tuple(sorted((m['role'],m['value']) for m in measures))
+    return (row['question'],row.get('answer',''),dims)
 
 
 def local_batch(choices, count, difficulty):
@@ -70,8 +81,8 @@ def local_batch(choices, count, difficulty):
         choice = choices[i % len(choices)]
         for _ in range(500):
             row = make_question(choice, difficulty, *(rng.randint(lo, hi) for _ in range(3)))
-            if row['question'] not in seen:
-                seen.add(row['question']); rows.append(row); break
+            if question_key(row) not in seen:
+                seen.add(question_key(row)); rows.append(row); break
         else:
             raise ValueError('Not enough distinct questions. Reduce the question count.')
     return rows
@@ -85,22 +96,24 @@ def ai_batch(choices, count, difficulty, info):
     for i, (u, f, entry) in enumerate(choices):
         sample = make_question((u, f, entry), difficulty, lo, lo, lo)
         options.append(dict(topic=i, unit=u, family=f, label=entry['label'], marks=sample['marks'],
-                            diagram=bool(sample.get('diagram')), parameters=PARAMETERS[f],
+                            diagram=bool(sample.get('diagram')), parameters=('For composites, a,b,c are seeds for strip widths 6 + seed mod 5, base height 5 + c mod 4, and steps 3 + seed mod 3. Hard shape profile is chosen by a mod 4.' if f=='l-shape' else PARAMETERS.get(f,'Bounded numerical seeds')),
+                            difficulty_features=sample.get('difficulty_features','Independent application of the selected topic.'),
                             layouts=(list(geometry.LAYOUTS) if sample.get('diagram') else [0]),
                             wording_examples=wording_options(sample)))
     item = {'type':'object','additionalProperties':False,'required':['topic','a','b','c','wording','layout'],
             'properties':{'topic':{'type':'integer','enum':list(range(len(choices)))},
                           **{k:{'type':'integer','enum':list(range(lo,hi+1))} for k in 'abc'},
-                          'wording':{'type':'integer','enum':[0,1]}, 'layout':{'type':'integer','enum':list(geometry.LAYOUTS)}}}
+                          'wording':{'type':'integer','enum':[0,1] if difficulty=='standard' and all(len(o['wording_examples'])>1 for o in options) else [0]}, 'layout':{'type':'integer','enum':list(geometry.LAYOUTS)}}}
     schema = {'type':'object','additionalProperties':False,'required':['questions','guidance'],
               'properties':{'questions':{'type':'array','items':item},'guidance':{'type':'string'}}}
     payload = dict(model=os.environ['KB_STUDIO_MODEL'],store=False,max_output_tokens=1800,
                    instructions=('Design original Foundation mathematics using only these topic IDs and numerical parameters. '
                     'The chosen units, topics, difficulty and total count are mandatory. Every selected topic ID must appear at least once; '
                     'distribute extra questions evenly unless the optional teacher guidance suggests a different emphasis. '
+                    'Difficulty changes the task structure, not only numbers. Easy is guided recall, medium is independent application, hard adds inference and dependent problem solving. The examples and difficulty_features describe the actual tasks; do not simplify or override them. '
                     'Choose distinct actual questions, not merely different unused parameters or wording. For diagram topics, '
                     'vary the ratios of side lengths and layout indices (0 to 7) rather than repeating the same outline. '
-                    'For L shapes, layouts rotate or reflect the cutout; for trapezia they shift the short base and invert it; '
+                    'Composite floor profiles vary with seeds; layouts rotate or reflect the labelled walls. For trapezia they shift the short base and invert it; '
                     'for Pythagoras they change diagonal direction and dimension placement. For non-diagram topics layout must be 0. '
                     'Choose wording index 0 or 1 only when the corresponding example exists. '
                     'Use the optional guidance where supported by the supplied templates. It cannot override mandatory settings. '
@@ -135,8 +148,8 @@ def accept(response, choices, count, difficulty):
             if layout is not None and (type(layout) is not int or layout not in geometry.LAYOUTS): raise ValueError('Unsupported diagram layout.')
             if choices[topic][1] not in geometry.FAMILIES and layout not in (None,0): raise ValueError('Layout is only valid for diagram topics.')
             row = make_question(choices[topic],difficulty,*params,layout=layout) if layout is not None else make_question(choices[topic],difficulty,*params)
-            if row['question'] in seen: raise ValueError('Duplicate mathematical question.')
-            seen.add(row['question']); covered.add(topic)
+            if question_key(row) in seen: raise ValueError('Duplicate mathematical question.')
+            seen.add(question_key(row)); covered.add(topic)
             if wording:
                 variants = wording_options(row)
                 if wording>=len(variants): raise ValueError('Unavailable wording variation.')
@@ -145,9 +158,9 @@ def accept(response, choices, count, difficulty):
                 a,b,c,_,layout = row['_diagram_seed']
                 row['_diagram_seed'] = (a,b,c,wording,layout)
             rows.append(dict(row,mode='model',model_role='AI-designed parameters and curated wording; locally constructed question',
-                             validation='Independent numeric check passed after AI parameter design; proposed rubric requires teacher review'))
+                             validation='Independent numeric check passed after AI parameter design; designed difficulty and proposed rubric require teacher review'))
         if covered!=set(range(len(choices))): raise ValueError('A selected topic was omitted.')
-        if len({r['question'] for r in rows})!=count: raise ValueError('Duplicate question wording.')
+        if len({question_key(r) for r in rows})!=count: raise ValueError('Duplicate question wording.')
         if guidance.strip(): rows[0]['generation_notice']='AI guidance note (check against your request): '+guidance.strip()
         return rows
     except (ValueError, KeyError, TypeError, IndexError) as exc:
@@ -176,7 +189,7 @@ def hybrid_batch(choices, count, difficulty, info):
         raise ValueError('Hybrid diagram classification changed; no questions added.')
     local_iter, model_iter = iter(local), iter(model)
     rows = [next(model_iter) if flag else next(local_iter) for flag in slots]
-    if len({r['question'] for r in rows})!=count or {(r['unit'],r['family']) for r in rows}!={(u,f) for u,f,_ in choices}:
+    if len({question_key(r) for r in rows})!=count or {(r['unit'],r['family']) for r in rows}!={(u,f) for u,f,_ in choices}:
         raise ValueError('Hybrid batch did not meet topic coverage or uniqueness; no questions added.')
     note = f'Hybrid: {local_count} local question(s), {diagram_count} AI-designed diagram question(s); '
     note += 'one model request.' if diagram_count else 'no API request.'
@@ -204,7 +217,7 @@ def diversify(rows, choices, difficulty, used, shapes=None):
     lo,hi=DOMAINS[difficulty]
     by_topic={(u,f):choice for choice in choices for u,f,_ in [choice]}
     shapes=set(shapes or ())
-    seen={r['question'] for r in rows}
+    seen={question_key(r) for r in rows}
     for i, original in enumerate(rows):
         seed=original.get('_diagram_seed')
         if seed is None:
@@ -216,7 +229,7 @@ def diversify(rows, choices, difficulty, used, shapes=None):
         def try_layouts(row, params, preferred):
             nonlocal fallback
             for l in [preferred]+[v for v in geometry.LAYOUTS if v!=preferred]:
-                d=geometry.diagram(family,*params,l)
+                d=demand.diagram_for(family,difficulty,*params,l)
                 key=geometry.diagram_key(d); shape=geometry.shape_key(d)
                 if key in used: continue
                 candidate=(row,d,key,shape)
@@ -230,7 +243,7 @@ def diversify(rows, choices, difficulty, used, shapes=None):
             for params in product(range(lo,hi+1),repeat=3):
                 if params==(a,b,c): continue
                 candidate=make_question(choice,difficulty,*params,wording=wording)
-                if candidate['question'] in seen: continue
+                if question_key(candidate) in seen: continue
                 best=try_layouts(candidate,params,geometry.default_layout(*params))
                 if best is not None: break
         best=best or fallback
@@ -238,7 +251,7 @@ def diversify(rows, choices, difficulty, used, shapes=None):
             raise ValueError('Could not find a distinct diagram for the selected topics. Reduce the count or choose another topic. No questions added.')
         row,d,key,shape=best
         if row is not original:
-            seen.discard(original['question']);seen.add(row['question'])
+            seen.discard(question_key(original));seen.add(question_key(row))
             # Do not misrepresent locally repaired mathematical parameters as
             # having been directly chosen by the model.
             if original.get('mode')=='model':
