@@ -33,6 +33,7 @@ VARIANTS = {
     'binary': ('Convert the binary number ', 'Express the binary number '),
     'nth-term': ('Find an expression', 'Write an expression'),
     'indices': ('Write ', 'Express '),
+    'shopping-discount': ('A sports shop', 'A cycling shop'),
     'discount-budget': ('A club', 'A community group'),
     'l-shape': ('An L-shaped floor', 'An L-shaped workshop floor'),
     'trapezium': ('A trapezium-shaped garden', 'A trapezium-shaped lawn'),
