@@ -67,6 +67,7 @@ function updateBuilderControls(){
   byId('builder-unit-summary').textContent=s.units.length?s.units.join(', '):'Choose units';
   byId('builder-topic-summary').textContent=s.topics.length?s.topics.length+' topic'+(s.topics.length===1?'':'s')+' selected':'Choose topics';
   byId('builder-count').min=String(Math.max(1,s.topics.length));
+  byId('builder-difficulty-help').textContent=({easy:'Easy: guided recall, explicit method hints and simpler calculations.',standard:'Medium: independent application, fewer hints and linked calculations.',challenge:'Hard: infer missing information, choose methods and solve linked problems.'})[s.difficulty]+' Designed difficulty; not calibrated against student results.';
   byId('builder-info').disabled=builderBusy||s.mode==='local';
   byId('builder-ai-option').disabled=!builderAI;
   byId('builder-info-help').textContent=s.mode==='hybrid'?'Hybrid: AI guidance applies only to questions with diagrams. Text-only questions use no API. Diagram artwork is drawn by the maths engine. Do not include pupil data.':s.mode==='model'?'Optional: guide emphasis, numerical choices and available wording variants. Unsupported features may not be possible. Do not include pupil data.':'Optional guidance is only used in AI mode. Local generation costs nothing.';
