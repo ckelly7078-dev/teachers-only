@@ -97,13 +97,13 @@ def ai_batch(choices, count, difficulty, info):
         sample = make_question((u, f, entry), difficulty, lo, lo, lo)
         options.append(dict(topic=i, unit=u, family=f, label=entry['label'], marks=sample['marks'],
                             diagram=bool(sample.get('diagram')), parameters=('For composites, a,b,c are seeds for strip widths 6 + seed mod 5, base height 5 + c mod 4, and steps 3 + seed mod 3. Hard shape profile is chosen by a mod 4.' if f=='l-shape' else PARAMETERS.get(f,'Bounded numerical seeds')),
-                            difficulty_features=sample.get('difficulty_features','Independent application of the selected skill.'),
+                            difficulty_features=sample.get('difficulty_features','Independent application of the selected topic.'),
                             layouts=(list(geometry.LAYOUTS) if sample.get('diagram') else [0]),
                             wording_examples=wording_options(sample)))
     item = {'type':'object','additionalProperties':False,'required':['topic','a','b','c','wording','layout'],
             'properties':{'topic':{'type':'integer','enum':list(range(len(choices)))},
                           **{k:{'type':'integer','enum':list(range(lo,hi+1))} for k in 'abc'},
-                          'wording':{'type':'integer','enum':[0,1] if difficulty=='standard' else [0]}, 'layout':{'type':'integer','enum':list(geometry.LAYOUTS)}}}
+                          'wording':{'type':'integer','enum':[0,1] if difficulty=='standard' and all(len(o['wording_examples'])>1 for o in options) else [0]}, 'layout':{'type':'integer','enum':list(geometry.LAYOUTS)}}}
     schema = {'type':'object','additionalProperties':False,'required':['questions','guidance'],
               'properties':{'questions':{'type':'array','items':item},'guidance':{'type':'string'}}}
     payload = dict(model=os.environ['KB_STUDIO_MODEL'],store=False,max_output_tokens=1800,
