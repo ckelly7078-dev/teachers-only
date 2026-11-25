@@ -171,6 +171,36 @@ async function inspect(id) {
   };
   target.scrollIntoView({block:'start'});
 }
+let studioFamilies=[];
+function showStudioEvidence() {
+  const item=studioFamilies.find(x=>x.family===byId('studio-family').value);
+  byId('studio-evidence').textContent=item ? item.skill_label+' · specification p. '+item.spec_page+
+    (item.sources.length?' · '+item.sources.length+' related-skill source-checked references':' · specification only; no source-checked references in this unit') : 'No enabled family for this unit.';
+}
+async function studioCatalog(){
+  const unit=byId('studio-unit').value, selector=byId('studio-family');
+  const submit=byId('studio').querySelector('button');
+  submit.disabled=true; selector.replaceChildren(); studioFamilies=[]; showStudioEvidence();
+  const rows=await api('studio-catalog',{unit});
+  if(byId('studio-unit').value!==unit) return;
+  studioFamilies=rows;
+  for(const item of rows) selector.add(new Option(item.label,item.family));
+  showStudioEvidence(); submit.disabled=!rows.length;
+}
+byId('studio-unit').onchange=()=>run(studioCatalog);
+byId('studio-family').onchange=showStudioEvidence;
+onForm('studio',async args=>{
+  const rows=await api('studio',{...args,count:Number(args.count)},true);
+  const wrap=byId('studio-results'); wrap.replaceChildren();
+  for(const d of rows){
+    const card=el('article');
+    card.append(el('h3',d.label),el('p',d.question),el('small',d.marks+' marks · '+d.difficulty),
+      el('small',d.evidence_level==='specification-only'?'Specification only':'Related-skill source-checked references'),
+      button('Review draft',()=>{showDraft(d); byId('draft').scrollIntoView({block:'start'});}));
+    wrap.append(card);
+  }
+  statusText(rows.length+' validated drafts saved for teacher review.');
+});
 onForm('generate',async args=>{
   const d=await api('practice',args,true);
   showDraft(d);
@@ -180,11 +210,13 @@ function showDraft(d) {
   const wrap=byId('draft'), form=el('div',undefined,'stack');
   wrap.replaceChildren(el('h3',d.label),form);
   const prompt=field(form,'Practice question','textarea',d.question);
+  if(d.family){prompt.readOnly=true; form.append(el('small','Question wording is locked to the validated solution; regenerate for a different question.'));}
   const solution=el('ol'), rubric=el('ul');
   for(const step of d.solution) solution.append(el('li',step));
   for(const rule of d.rubric) rubric.append(el('li',rule));
   form.append(el('strong','Worked solution'),solution,el('strong',d.answer+' · '+d.marks+' marks'),rubric,
     el('p',d.validation),el('small',d.spec+' · '+d.difficulty),el('small',d.sources.map(reference).join(' / ')));
+  if(d.family) form.append(el('small',d.evidence_level==='specification-only'?'Specification-only template; no related verified references in this unit.':'References concern the same skill, not a verified match to this original question.'),el('small','Proposed marking scheme; teacher approval required.'));
   if (d.state==='approved') {
     prompt.readOnly=true; form.append(el('strong','Approved by teacher')); return;
   }
@@ -202,4 +234,4 @@ async function history(before) {
   if (!rows.length) wrap.append(el('p','No saved practice yet.'));
 }
 byId('history').onclick=()=>run(()=>history());
-run(async()=>{ await summary(); statusText('Foundation inventory loaded.'); });
+run(async()=>{ await summary(); await studioCatalog(); statusText('Foundation inventory loaded.'); });
