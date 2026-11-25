@@ -3,7 +3,7 @@
 Widths/heights are integer metres. Independent unit-cell and edge-count checks
 verify decomposition, perimeter and purchase arithmetic; never infer from pixels.
 """
-from math import hypot, ceil
+from math import hypot
 
 
 def profile(level,a,b,c):
@@ -49,6 +49,8 @@ def model(level,a,b,c):
 
 
 def diagram(level,a,b,c,layout=0):
+    if level not in ('easy','standard','challenge') or any(type(v) is not int or not 2<=v<=18 for v in (a,b,c)) or type(layout) is not int or not 0<=layout<8:
+        raise ValueError('Invalid composite diagram parameters')
     widths,heights,poly,walls=model(level,a,b,c)
     W,H=sum(widths),max(heights)
     # Reflections are safe because every role, endpoint and normal transforms
@@ -83,8 +85,7 @@ def diagram(level,a,b,c,layout=0):
         guides += [line(p,P),line(q,Q)]
         # Use vertically oriented text on vertical dimension lines; this
         # avoids collision with nearby steps or adjoining dimension spans.
-        vertical=abs(P[0]-Q[0])<.001
-        offset=13 if vertical else 13
+        offset=13
         mid=[(P[0]+Q[0])/2+offset*nx,(P[1]+Q[1])/2+offset*ny]
         labels.append(r(mid)+[f'{value} m'])
         measures.append(dict(role=role,value=value,source=[r(p),r(q)],normal=list(n),line_index=i,guide_index=j,label_index=k))
@@ -116,7 +117,13 @@ def validate_diagram(d,level,a,b,c,layout):
     def require(ok):
         if not ok: raise ValueError('Composite geometry measurement mismatch')
     require(len(d['polygon'])==len(poly) and all(near(x,point(y)) for x,y in zip(d['polygon'],poly)))
-    require(len(d['measurements'])==len(walls) and len(d['labels'])==len(walls))
+    require(len(d['measurements'])==len(walls) and len(d['labels'])==len(walls) and len(d['label_angles'])==len(walls))
+    require(d['centre_labels'] is True and not d['lines'])
+    construction=[]
+    if level=='easy':
+        x=widths[0]; construction=[point((x,H-min(heights)))+point((x,H))]
+    require(len(d['construction_lines'])==len(construction) and all(near(p,q) for p,q in zip(d['construction_lines'],construction)))
+    boxes=[]
     require(len(d['dimension_lines'])==3*len(walls) and len(d['guides'])==2*len(walls))
     for i,((role,p,q,n,value,outer),m) in enumerate(zip(walls,d['measurements'])):
         p,q=point(p),point(q)
@@ -137,7 +144,15 @@ def validate_diagram(d,level,a,b,c,layout):
         x,y,text=d['labels'][i]; mid=[(P[0]+Q[0])/2+13*nx,(P[1]+Q[1])/2+13*ny]
         require(text==f'{value} m' and near([x,y],mid))
         require(d['label_angles'][i]==(-90 if abs(P[0]-Q[0])<.001 else 0))
-        require(15<=x<=465 and 15<=y<=265)
+        # Conservative bounds for the renderer's 16px dimension text.
+        tw,th=8*len(text)+4,18
+        if d['label_angles'][i]:tw,th=th,tw
+        box=(x-tw/2,y-th/2,x+tw/2,y+th/2)
+        require(0<=box[0] and box[2]<=480 and 0<=box[1] and box[3]<=280)
+        require(all(min(box[2],other[2])-max(box[0],other[0])<=1 or min(box[3],other[3])-max(box[1],other[1])<=1 for other in boxes))
+        boxes.append(box)
+    for l in d['dimension_lines']+d['guides']+d['construction_lines']:
+        require(len(l)==4 and all(0<=x<=480 and 0<=y<=280 for x,y in (l[:2],l[2:])))
     # Verify the scaled polygon area against the independent cell model.
     cells=cell_model(widths,heights); p=d['polygon']; area=abs(sum(x*v-u*y for (x,y),(u,v) in zip(p,p[1:]+p[:1])))/2/scale**2
     require(abs(area-len(cells))<.01)
