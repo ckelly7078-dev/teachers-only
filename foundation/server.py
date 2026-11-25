@@ -66,7 +66,9 @@ def get_api(dbpath,route,args,actor=None):
         if route=='examiner':
             return examiner_search(db,unit,args.get('q',''),int(args.get('limit','8')),args.get('skill',''))
         if route=='workspace':
-            return workspace.queue(db,actor)
+            return workspace.queue(db,actor,args.get('worksheet'))
+        if route=='worksheets':
+            return workspace.collections(db,actor)
         if route=='drafts':
             return [dict(id=r['id'],state=r['state'],**json.loads(r['data'])) for r in db.execute(
                 'SELECT id,state,data FROM practice_drafts WHERE owner=? AND id<? ORDER BY id DESC LIMIT 11',
@@ -98,8 +100,10 @@ def dispatch(dbpath,route,data,actor):
     if route=='review':
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
+    if route in ('studio-prompt','studio','practice') and 'worksheet' in data:
+        workspace.worksheet_key(data['worksheet'])
     if route=='studio-prompt':
-        rows = studio_prompt.author(dbpath,data['unit'],data['prompt'])
+        rows = workspace.tag_rows(studio_prompt.author(dbpath,data['unit'],data['prompt']),data)
         with connection(dbpath) as db, db:
             return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                         (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
@@ -108,12 +112,12 @@ def dispatch(dbpath,route,data,actor):
         if mode not in ('local','model'):
             raise ValueError('Choose local or model-assisted generation')
         generator = studio_ai.generate if mode=='model' else studio_generate
-        rows = generator(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1))
+        rows = workspace.tag_rows(generator(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1)),data)
         with connection(dbpath) as db, db:
             return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                         (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
     if route=='practice':
-        practice = generate(dbpath,data['skill'],data.get('mode','local'))
+        practice = workspace.tag_rows([generate(dbpath,data['skill'],data.get('mode','local'))],data)[0]
         with connection(dbpath) as db, db:
             draft_id = db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                                   (actor,json.dumps(practice))).lastrowid
