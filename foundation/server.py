@@ -16,6 +16,7 @@ from .db import DETAIL, HERE, UNITS, connection, search
 from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
+from .studio import catalog as studio_catalog, generate as studio_generate
 
 API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
@@ -53,6 +54,8 @@ def get_api(dbpath,route,args,actor=None):
     unit = args.get('unit','M1')
     if unit not in UNITS:
         raise ValueError('Foundation unit required')
+    if route=='studio-catalog':
+        return studio_catalog(dbpath,unit)
     if route=='search':
         return search(dbpath,unit,args.get('q',''),int(args.get('limit','5')),args.get('skill',''))
     with connection(dbpath) as db:
@@ -89,6 +92,11 @@ def dispatch(dbpath,route,data,actor):
     if route=='review':
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
+    if route=='studio':
+        rows = studio_generate(dbpath,data['unit'],data['family'],data.get('difficulty','standard'),data.get('count',1))
+        with connection(dbpath) as db, db:
+            return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
+                        (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
     if route=='practice':
         practice = generate(dbpath,data['skill'],data.get('mode','local'))
         with connection(dbpath) as db, db:
@@ -104,6 +112,8 @@ def dispatch(dbpath,route,data,actor):
                 raise Conflict('This draft is unavailable or already approved')
             practice = json.loads(draft[0])
             question = bounded_text(data['question'],1500,'question')
+            if question!=practice['question'] and practice.get('family'):
+                raise Conflict('Studio question edits require a new validated draft; regenerate instead')
             if question!=practice['question']:
                 practice['generated_question'] = practice['question']
                 practice['validation'] = 'Teacher edited the question and confirmed the worked solution and marks'
