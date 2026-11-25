@@ -13,3 +13,16 @@ Read AGENTS.md. Prioritize functional end-to-end workflows, shared class and ass
 
 ## Tests
 Run `node tests/smoke.cjs` with a current Node.js release. Checks use a mocked DOM and storage, not a full browser. Manual accessibility and browser testing remain necessary.
+
+## Foundation mathematics knowledge base
+
+The Teacher dashboard now opens a separate Curriculum Knowledge Base for CCEA GCSE Mathematics Foundation. M1 is the initial retrieval and practice unit. M2, M5 and M6 have inventory coverage. The nine existing portal modules keep their existing behaviour.
+
+Run the Python service and mount the saved private SQLite checkpoint to use the knowledge base. The static portal also opens independently. The teacher demo sign-in is separate from the credentials protecting the curriculum service.
+
+Setup, ingestion, restoration, retrieval budgets, rights decisions and current verification coverage are in [foundation/README.md](foundation/README.md). Run both test suites from the project root.
+
+```sh
+node tests/smoke.cjs
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
