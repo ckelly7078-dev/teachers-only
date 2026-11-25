@@ -175,6 +175,28 @@ class FoundationTest(unittest.TestCase):
                     self.assertTrue(validate(skill,a,b,ans))
                     self.assertFalse(validate(skill,a,b,ans+1))
 
+    def test_studio_saved_drafts_and_approval(self):
+        from foundation.server import get_api
+        self.checked()
+        rows = get_api(self.path,'studio-catalog',{'unit':'M1'},'Teacher A')
+        self.assertIn('percent',[r['family'] for r in rows])
+        self.assertNotIn('binary',[r['family'] for r in rows])
+        drafts = dispatch(self.path,'studio',{'unit':'M1','family':'percent','difficulty':'easy','count':5},'Teacher A')
+        self.assertEqual(len({d['id'] for d in drafts}),5)
+        self.assertEqual(len({d['question'] for d in drafts}),5)
+        self.assertTrue(all(d['sources'] and d['state']=='draft' for d in drafts))
+        self.assertEqual(len(get_api(self.path,'drafts',{},'Teacher A')),5)
+        self.assertEqual(get_api(self.path,'drafts',{},'Teacher B'),[])
+        with self.assertRaises(Conflict):
+            dispatch(self.path,'approve',{'id':drafts[0]['id'],'question':drafts[0]['question']},'Teacher B')
+        with self.assertRaises(Conflict):
+            dispatch(self.path,'approve',{'id':drafts[0]['id'],'question':'Edited after validation'},'Teacher A')
+        out = dispatch(self.path,'approve',{'id':drafts[0]['id'],'question':drafts[0]['question']},'Teacher A')
+        self.assertEqual(out['state'],'approved')
+        with self.assertRaises(ValueError):
+            dispatch(self.path,'studio',{'unit':'M1','family':'binary'},'Teacher A')
+        self.assertEqual(len(get_api(self.path,'drafts',{},'Teacher A')),5)
+
     def test_model_uses_bounded_metadata_and_checks_parameters(self):
         from foundation.practice import parameters
         self.checked()
