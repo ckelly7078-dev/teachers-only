@@ -71,4 +71,18 @@ CCEA's published past-paper notice permits educational download/print and restri
 
 Run both test commands in the project README. The Foundation suite uses fictional PDFs and exercises parsing, duplicates, pairing, incremental restarts, classification, reference search, access control, cache invalidation, alternative marking routes, restore, generation and teacher approval. A local single-process benchmark used 35 uncached searches per size and an indexed high-frequency term. Median lookup took 0.58 ms with 10,000 added synthetic records and 0.58 ms with 100,000. These are local retrieval timings, excluding authentication, HTTP and provider latency. Production latency and costs have not been measured.
 
-Full mock papers, free-form AI question writing, diagram generation and licensed visual retrieval, examiner observations, scanned marking, class feedback integration and teacher-scored evaluation are later milestones. School deployment, live provider testing and full browser acceptance are outstanding. The existing portal's 26 mocked-DOM checks cover the shared teacher workspace. Keep M2, M5 and M6 at inventory stage until M1 validation merits expansion.
+Full mock papers, free-form AI question writing, diagram generation and licensed visual retrieval, examiner observations, scanned marking, class feedback integration and teacher-scored evaluation are later milestones. School deployment, live provider testing and full browser acceptance are outstanding. The existing portal's 26 mocked-DOM checks cover the shared teacher workspace. The all-unit candidate expansion below is staged for review; retrieval remains restricted to source-checked records.
+
+## All-unit candidate expansion (25 November 2026)
+
+The new private checkpoint `CCEA-Foundation-all-units-checkpoint.zip` extends the M1 pilot while preserving all previous reviewed records, reviews, postings and pair decisions. It contains 2,981 candidate or verified question/part anchors: M1 980, M2 711, M5 691 and M6 599. The 12 previously source-checked M1 records remain the only searchable records. M2/M5/M6 taxonomy and source-level review are not yet implemented.
+
+Run the new metadata-only structural audit on an existing restored database, one unit at a time:
+```sh
+python -m foundation.expand --db "$KB_DB" --archive "$PRIVATE_ZIP" --unit M1 --out /private/structural-M1.csv
+# Repeat for M2, M5 and M6
+python -m unittest discover -s tests -p test_expand.py
+```
+The audit checks cover question count, layout and raw-text mark totals, scheme question count and exact marked-part anchors. It stages only missing non-M1 candidates, never overwrites existing records and never promotes them to verified. Both text views can share PDF extraction errors; structural agreement is not visual, mathematical or rubric verification. Results: 41/66 confirmed pairs show structural agreement; 25 need review, including missed question headings, hidden or duplicated mark labels and unmatched part labels. Six date-unresolved 2021 pairs remain excluded. Missing files remain 15 against the supplied inventory. The repeated audit preserved row counts and the snapshot passed SQLite integrity and foreign-key checks. The three new focused parser tests passed locally. Full prior integration and browser suites were not rerun in this session.
+
+The candidate staging uses extraction version 4. Do not rerun the version-3 extractor against these units until parser reconciliation is implemented. Keep the database, reports and source PDFs outside public Git. Next: improve layout-aware extraction, add unit-specific curriculum classification and reviewed marking routes, then test retrieval across all Foundation units. The all-unit checkpoint contains no new verbatim examination content.
