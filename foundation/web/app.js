@@ -256,7 +256,7 @@ onForm('prompt-studio',async args=>{
   try{
     const rows=await api('studio-prompt',args,true);
     showStudioBatch(rows);
-    feedback.textContent=rows.length+' validated drafts generated. Check that the questions meet your request before approving them.';
+    feedback.textContent=rows[0]?.generation_notice || (rows.length+' validated drafts generated. Check that the questions meet your request before approving them.');
   }catch(error){
     feedback.textContent=error.message;
     throw error;
