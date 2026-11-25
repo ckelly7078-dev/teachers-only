@@ -17,14 +17,16 @@ from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
 from .studio import catalog as studio_catalog, generate as studio_generate
-from . import studio_ai, studio_prompt
+from . import studio_ai, studio_prompt, workspace
 
 API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
           '/foundation/web/index.html':(HERE/'web/index.html','text/html'),
           '/foundation/web/app.js':(HERE/'web/app.js','text/javascript'),
           '/foundation/web/diagrams.js':(HERE/'web/diagrams.js','text/javascript'),
-          '/foundation/web/style.css':(HERE/'web/style.css','text/css')}
+          '/foundation/web/style.css':(HERE/'web/style.css','text/css'),
+          '/foundation/web/worksheet.js':(HERE/'web/worksheet.js','text/javascript'),
+          '/foundation/web/worksheet.css':(HERE/'web/worksheet.css','text/css')}
 
 
 def credentials(username,password,salt=None):
@@ -63,6 +65,8 @@ def get_api(dbpath,route,args,actor=None):
     with connection(dbpath) as db:
         if route=='examiner':
             return examiner_search(db,unit,args.get('q',''),int(args.get('limit','8')),args.get('skill',''))
+        if route=='workspace':
+            return workspace.queue(db,actor)
         if route=='drafts':
             return [dict(id=r['id'],state=r['state'],**json.loads(r['data'])) for r in db.execute(
                 'SELECT id,state,data FROM practice_drafts WHERE owner=? AND id<? ORDER BY id DESC LIMIT 11',
@@ -114,24 +118,12 @@ def dispatch(dbpath,route,data,actor):
             draft_id = db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
                                   (actor,json.dumps(practice))).lastrowid
         return dict(practice,id=draft_id,state='draft')
+    if route=='decision':
+        with connection(dbpath) as db:
+            return workspace.decide(db,actor,data)
     if route=='approve':
-        with connection(dbpath) as db, db:
-            db.execute('BEGIN IMMEDIATE')
-            draft = db.execute("SELECT data FROM practice_drafts WHERE id=? AND owner=? AND state='draft'",
-                               (data['id'],actor)).fetchone()
-            if not draft:
-                raise Conflict('This draft is unavailable or already approved')
-            practice = json.loads(draft[0])
-            question = bounded_text(data['question'],1500,'question')
-            if question!=practice['question'] and practice.get('family'):
-                raise Conflict('Studio question edits require a new validated draft; regenerate instead')
-            if question!=practice['question']:
-                practice['generated_question'] = practice['question']
-                practice['validation'] = 'Teacher edited the question and confirmed the worked solution and marks'
-            practice['question'] = question
-            db.execute("UPDATE practice_drafts SET data=?,state='approved',approved=CURRENT_TIMESTAMP WHERE id=?",
-                       (json.dumps(practice),data['id']))
-            return dict(practice,id=data['id'],state='approved')
+        with connection(dbpath) as db:
+            return workspace.approve(db,actor,data)
     raise LookupError()
 
 
