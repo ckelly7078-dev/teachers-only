@@ -56,7 +56,7 @@ async function summary() {
       el('p',u.papers+' papers · '+u.paired+' confirmed pairs'),el('p',u.pair_review+' pairs to review · '+u.missing+' missing files'),
       el('p',u.questions+' anchors · '+u.verified+' verified · '+u.review+' to review'),
       el('small',u.classified+' classifications incl. suggestions · '+u.covered_skills+' / '+u.skills+' skill groups verified'),
-      el('small',u.reports+' reports · '+u.failures+' extraction failures'),el('small','Last extraction: '+(u.last_extraction || 'Pending')));
+      el('small',u.reports+' reports · '+(u.examiner_anchors || 0)+' question references · '+(u.examiner_notes || 0)+' teaching notes'),el('small',(u.examiner_tagged || 0)+' report questions with provisional topic evidence · '+u.failures+' extraction failures'),el('small','Last extraction: '+(u.last_extraction || 'Pending')));
     return card;
   }));
 }
@@ -82,6 +82,20 @@ onForm('search',async args => {
   const data = await api('search',args);
   byId('results').replaceChildren(...data.map(showRecord));
   statusText(data.length ? data.length+' verified matches shown.' : 'No verified matches for this search.');
+});
+function showExaminer(r) {
+  const card=el('article');
+  card.append(el('h3',r.year+' '+r.series+' · '+r.unit+' · '+r.component+' · Q'+r.num),el('small','Chief Examiner report '+r.filename+' · PDF pp. '+r.start_page+'–'+r.end_page));
+  for (const n of r.notes) card.append(el('strong',n.topic),el('p',n.note),el('small',n.review_status));
+  if (r.skills.length) card.append(el('small','Provisional whole-question topic links: '+r.skills.map(s=>s.label+' (spec. p. '+s.spec_page+')').join('; ')));
+  if (!r.notes.length) card.append(el('p','Topic evidence only. The examiner observation has not yet been summarised.'));
+  card.append(el('small','Examiner commentary; not an official marking rule.'));
+  return card;
+}
+onForm('examiner-search',async args=>{
+  const data=await api('examiner',args);
+  byId('examiner-results').replaceChildren(...data.map(showExaminer));
+  statusText(data.length?data.length+' examiner references shown.':'No linked examiner evidence for this search.');
 });
 async function papers(unit,cursor={}) {
   const data = await api('papers',{unit,...cursor});
@@ -123,6 +137,9 @@ async function inspect(id) {
   const target = byId('editor');
   target.replaceChildren(el('h3',reference(r)));
   if (r.extraction_note) target.append(el('p',r.extraction_note));
+  if (r.examiner_evidence?.length) {
+    target.append(el('h4','Related whole-question examiner evidence'),...r.examiner_evidence.map(showExaminer));
+  }
   const form = el('form',undefined,'stack');
   target.append(form);
   const topic = field(form,'Curriculum skill','select','');
