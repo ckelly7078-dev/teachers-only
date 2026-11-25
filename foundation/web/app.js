@@ -232,8 +232,9 @@ function examPreview(d,number){
   return preview;
 }
 async function showStudioBatch(rows){
+  addWorkspaceRows(rows);
   await refreshWorkspace();
-  statusText(rows.length+' new validated drafts added · '+rows.reduce((n,r)=>n+r.marks,0)+' marks in this batch. Earlier questions are retained.');
+  statusText(rows.length+' new validated drafts added · '+rows.reduce((n,r)=>n+r.marks,0)+' marks in this batch. Earlier questions on this page are retained.');
 }
 byId('prompt-example').onclick=()=>{
   byId('prompt-unit').value='M1';
@@ -245,7 +246,7 @@ onForm('prompt-studio',async args=>workspaceTask(async()=>{
   feedback.textContent='Designing and checking your questions…';
   statusText('AI is designing mathematical parameters…');
   try{
-    const rows=await api('studio-prompt',args,true);
+    const rows=await api('studio-prompt',{...args,temporary:true},true);
     await showStudioBatch(rows);
     feedback.textContent=rows[0]?.generation_notice || (rows.length+' validated drafts added. Review each question before approving.');
   }catch(error){
@@ -255,11 +256,11 @@ onForm('prompt-studio',async args=>workspaceTask(async()=>{
 }));
 onForm('studio',async args=>workspaceTask(async()=>{
   statusText(args.mode==='model'?'Selecting validated questions with AI…':'Generating validated questions…');
-  const rows=await api('studio',{...args,count:Number(args.count)},true);
+  const rows=await api('studio',{...args,count:Number(args.count),temporary:true},true);
   await showStudioBatch(rows);
 }));
 onForm('generate',async args=>workspaceTask(async()=>{
-  const d=await api('practice',args,true);
+  const d=await api('practice',{...args,temporary:true},true);
   await showStudioBatch([d]);
 }));
-run(async()=>{ await initWorksheet(); await summary(); await studioCatalog(); statusText('Foundation inventory and saved worksheet loaded.'); });
+run(async()=>{ await initWorksheet(); await summary(); await studioCatalog(); statusText('Foundation inventory loaded. New temporary worksheet ready.'); });
