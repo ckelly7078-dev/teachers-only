@@ -17,7 +17,7 @@ def design_request(path, data):
         raise ValueError('Choose 1 to 10 questions.')
     if type(topics) is not list or not 1 <= len(topics) <= count:
         raise ValueError('Choose at least one topic and no more topics than questions.')
-    if difficulty not in studio.DIFFICULTIES or mode not in ('local', 'model'):
+    if difficulty not in studio.DIFFICULTIES or mode not in ('local', 'model', 'hybrid'):
         raise ValueError('Select a supported difficulty and generation mode.')
     if not isinstance(info, str) or len(info) > 500:
         raise ValueError('Additional information must be at most 500 characters.')
@@ -139,7 +139,41 @@ def accept(response, choices, count, difficulty):
         raise studio_ai.StudioAIUnavailable('AI plan rejected: '+str(exc)[:160]+' No questions added. Try again or choose local mode.') from exc
 
 
+def hybrid_batch(choices, count, difficulty, info):
+    """One optional AI call, exclusively for families with schematic diagrams.
+
+    Round-robin allocation fixes the number of diagram and non-diagram slots
+    before sending anything to the model. Every chosen unit/topic is covered.
+    """
+    lo, _ = DOMAINS[difficulty]
+    diagram_flags = [bool(make_question(choice,difficulty,lo,lo,lo).get('diagram'))
+                     for choice in choices]
+    slots = [diagram_flags[i % len(choices)] for i in range(count)]
+    diagram_count = sum(slots)
+    local_count = count - diagram_count
+    diagram_choices = [c for c, flag in zip(choices,diagram_flags) if flag]
+    local_choices = [c for c, flag in zip(choices,diagram_flags) if not flag]
+    # No availability check or API call at all for an entirely text-only batch.
+    # If a diagram plan fails, the batch fails atomically, not silently partially.
+    local = local_batch(local_choices,local_count,difficulty) if local_count else []
+    model = ai_batch(diagram_choices,diagram_count,difficulty,info) if diagram_count else []
+    if len(local)!=local_count or len(model)!=diagram_count or any(r.get('diagram') for r in local) or any(not r.get('diagram') for r in model):
+        raise ValueError('Hybrid diagram classification changed; no questions added.')
+    local_iter, model_iter = iter(local), iter(model)
+    rows = [next(model_iter) if flag else next(local_iter) for flag in slots]
+    if len({r['question'] for r in rows})!=count or {(r['unit'],r['family']) for r in rows}!={(u,f) for u,f,_ in choices}:
+        raise ValueError('Hybrid batch did not meet topic coverage or uniqueness; no questions added.')
+    note = f'Hybrid: {local_count} local question(s), {diagram_count} AI-designed diagram question(s); '
+    note += 'one model request.' if diagram_count else 'no API request.'
+    if info and local_count:
+        note += ' Additional guidance applies only to the AI-designed diagram questions.' if diagram_count else ' Additional guidance was not used because no diagram topics were selected.'
+    guidance = [r.pop('generation_notice') for r in rows if r.get('generation_notice')]
+    rows[0]['generation_notice'] = ' '.join([note,*guidance])
+    return rows
+
+
 def generate(path, data):
     choices, count, difficulty, mode, info = design_request(path,data)
     if mode=='local': return local_batch(choices,count,difficulty)
+    if mode=='hybrid': return hybrid_batch(choices,count,difficulty,info)
     return ai_batch(choices,count,difficulty,info)
