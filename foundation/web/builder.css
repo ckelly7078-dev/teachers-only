@@ -21,3 +21,18 @@
 .builder-actions button:disabled{opacity:.6;cursor:not-allowed}#builder-gate{font-size:13px;margin:12px 0 0;color:#435a73}#builder-feedback{font-size:13px;color:#364960;margin:10px 0 0;overflow-wrap:anywhere}#builder-feedback:empty{display:none}
 #builder-retry[hidden]{display:none}.builder-dropdown summary:focus-visible,.builder-choice input:focus-visible{outline:3px solid #956600;outline-offset:2px}
 @media(max-width:720px){.builder-panel{padding:16px}.builder-grid,.builder-settings{grid-template-columns:1fr;gap:14px}.builder-options{max-height:280px}.builder-actions button{width:100%}}
+
+/* Readable controls at ordinary and reduced browser zoom. */
+#assessment-builder .builder-label,#assessment-builder .builder-settings label:not(.builder-choice){font-size:16px}
+#assessment-builder .builder-dropdown>summary{font-size:18px;min-height:48px;line-height:1.45;padding:12px 14px}
+#assessment-builder .builder-choice{font-size:18px;line-height:1.45;padding:10px 8px;min-height:44px;align-items:center}
+#assessment-builder .builder-choice strong{font-size:17px}
+#assessment-builder .builder-choice small{font-size:14px;line-height:1.4}
+#assessment-builder .builder-topic-group legend{font-size:15px}
+#assessment-builder .builder-choice input{width:20px;height:20px;min-width:20px;margin:0}
+#assessment-builder .builder-settings{align-items:start}
+#assessment-builder .builder-settings input[type=number],#assessment-builder select,#assessment-builder select option{font-size:18px;line-height:1.45}
+#assessment-builder .builder-single-field select[hidden]{display:none!important}
+#assessment-builder .builder-single-menu .builder-options{padding:6px}
+#assessment-builder .builder-single-menu .builder-choice:has(input:checked){background:#e4edf7;color:#174573}
+#assessment-builder .builder-single-menu .builder-choice:has(input:disabled){opacity:.5;cursor:not-allowed}
