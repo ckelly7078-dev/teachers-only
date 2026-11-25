@@ -24,6 +24,18 @@ PARAMETERS = {
     'gradient':'rise a, run b, intercept c',
 }
 DOMAINS={'easy':(2,6),'standard':(4,12),'challenge':(8,18)}
+SHOPPING_EXAMPLE = ('Create three 4-mark shopping discount questions about the reduction, sale price and money left in a budget. '
+                    'Include worked solutions and mark schemes.')
+
+
+class InvalidPlan(studio_ai.StudioAIUnavailable):
+    """A rejected response, distinct from an unavailable API or unsupported request."""
+
+
+def require(condition, message):
+    if not condition:
+        raise InvalidPlan('AI plan rejected: '+message+' No AI drafts saved.')
+
 
 
 def author(path,unit,prompt):
@@ -33,56 +45,87 @@ def author(path,unit,prompt):
     entries=studio.catalog(path,unit)
     if not entries: raise ValueError('No supported question families for this unit')
     families={e['family']:e for e in entries}
+    example=prompt.strip().casefold()==SHOPPING_EXAMPLE.casefold()
+    if example:
+        if 'shopping-discount' not in families: raise ValueError('Shopping questions are unavailable in this unit.')
+        families={'shopping-discount':families['shopping-discount']}
+        entries=list(families.values())
     options=[]
     for e in entries:
         f=e['family']; q,ans,steps,rubric=studio.build(f,4,4,4)
         options.append(dict(family=f,label=e['label'],skill=e['skill_label'],marks=len(rubric),
             diagram=f in ('l-shape','trapezium','pythagoras'),example=q,parameters=PARAMETERS[f]))
-    item={'type':'object','additionalProperties':False,'required':['family','difficulty','a','b','c'],
-          'properties':{'family':{'type':'string','enum':list(families)},'difficulty':{'type':'string','enum':list(DOMAINS)},
-                        **{k:{'type':'integer'} for k in 'abc'}}}
+    # Strict enums are supported by structured output. Use a separate nested
+    # schema per difficulty so no plan can mix a standard label with easy values.
+    def variant(d, bounds):
+        lo,hi=bounds
+        return {'type':'object','additionalProperties':False,'required':['family','difficulty','a','b','c'],
+                'properties':{'family':{'type':'string','enum':list(families)},
+                              'difficulty':{'type':'string','enum':[d]},
+                              **{k:{'type':'integer','enum':list(range(lo,hi+1))} for k in 'abc'}}}
+    item=variant('standard',DOMAINS['standard']) if example else {'anyOf':[variant(d,v) for d,v in DOMAINS.items()]}
     schema={'type':'object','additionalProperties':False,'required':['supported','reason','count','requested_marks','questions'],
-            'properties':{'supported':{'type':'boolean'},'reason':{'type':'string'},'count':{'type':'integer'},
-                          'requested_marks':{'type':'integer'},'questions':{'type':'array','items':item}}}
+            'properties':{'supported':{'type':'boolean'},'reason':{'type':'string'},
+                          'count':{'type':'integer','enum':[3] if example else list(range(11))},
+                          'requested_marks':{'type':'integer','enum':[4] if example else list(range(5))},
+                          'questions':{'type':'array','items':item}}}
     payload=dict(model=os.environ['KB_STUDIO_MODEL'],store=False,max_output_tokens=1800,
                  instructions=('Interpret the teacher request as a bounded original maths design. Use only supplied families, '
                   'respect the selected unit and any explicit count, topic, difficulty, marks, diagram or context constraints. '
                   'If a requested feature cannot be met exactly by these families, set supported=false with a short reason and no questions. '
                   'If supported, choose distinct parameter tuples for 1–10 questions; default count 5, standard difficulty. '
-                  'Domains: easy 2–6, standard 4–12, challenge 8–18 inclusive for a,b,c. '
+                  'Domains: easy 2–6, standard 4–12, challenge 8–18 inclusive for a,b,c. Distinct questions must differ in used mathematical values, not just an unused parameter. '
                   'requested_marks is explicit marks per question, or 0 if unspecified. Do not claim official CCEA approval. '
-                  'Do not invent new wording, code or mathematical operations. Return the structured plan only.'),
+                  'Do not invent new wording, code or mathematical operations. Return the structured plan only.') + (
+                  ' This is the built-in shopping example; it is supported. Return exactly three distinct standard shopping-discount designs, each with four marks.' if example else ''),
                  input=json.dumps(dict(unit=unit,request=prompt.strip(),families=options),ensure_ascii=True),
                  text={'format':{'type':'json_schema','name':'question_plan','strict':True,'schema':schema}})
-    return accept(studio_ai.send(payload),unit,families)
-
-
-def accept(response,unit,families):
+    response=studio_ai.send(payload)
     try:
-        if response['status']!='completed': raise ValueError()
+        rows=accept(response,unit,families,known_example=example)
+        if example:
+            require(len(rows)==3 and all(r['family']=='shopping-discount' and r['marks']==4 for r in rows),
+                    'the built-in example requires three four-mark shopping questions.')
+        return rows
+    except InvalidPlan as exc:
+        if not example: raise
+        # Only the exact built-in example has an unambiguous local equivalent.
+        # No retry or extra API charge. Never persist any invalid AI plan.
+        rows=studio.generate(path,unit,'shopping-discount','standard',3)
+        return [dict(r,model_role='Local fallback: the AI plan was rejected; no additional API call.',
+                     generation_notice=str(exc)+' Generated the built-in example locally instead.') for r in rows]
+
+
+
+def accept(response,unit,families,known_example=False):
+    try:
+        require(isinstance(response,dict) and response.get('status')=='completed','the model response did not complete.')
         parts=[p for x in response['output'] if x['type']=='message' for p in x['content']]
-        if len(parts)!=1 or parts[0]['type']!='output_text': raise ValueError()
+        require(len(parts)==1 and parts[0].get('type')=='output_text','the model did not return a single structured text plan.')
         plan=json.loads(parts[0]['text'],object_pairs_hook=studio_ai.unique_keys)
-        if type(plan) is not dict or set(plan)!={'supported','reason','count','requested_marks','questions'}: raise ValueError()
-        if type(plan['supported']) is not bool or type(plan['reason']) is not str or len(plan['reason'])>240: raise ValueError()
+        require(type(plan) is dict and set(plan)=={'supported','reason','count','requested_marks','questions'},'unexpected plan fields.')
+        require(type(plan['supported']) is bool and type(plan['reason']) is str and len(plan['reason'])<=240,'invalid support flag or reason.')
         if not plan['supported']:
-            if plan['questions']!=[]: raise ValueError()
+            require(not known_example,'the model declined the built-in supported example.')
+            require(plan['questions']==[],'unsupported response included question designs.')
             raise studio_ai.StudioAIUnavailable('Request is outside supported question designs. '+plan['reason'])
         count,marks,items=plan['count'],plan['requested_marks'],plan['questions']
-        if type(count) is not int or not 1<=count<=10 or type(marks) is not int or not 0<=marks<=4 or type(items) is not list or len(items)!=count: raise ValueError()
+        require(type(count) is int and 1<=count<=10 and type(items) is list and len(items)==count,'question count does not match the plan.')
+        require(type(marks) is int and 0<=marks<=4,'unsupported requested mark total.')
         rows=[]; seen=set()
         for item in items:
-            if type(item) is not dict or set(item)!={'family','difficulty','a','b','c'}: raise ValueError()
+            require(type(item) is dict and set(item)=={'family','difficulty','a','b','c'},'unexpected question fields.')
             f,d=item['family'],item['difficulty']; a,b,c=(item[k] for k in 'abc')
-            if f not in families or d not in DOMAINS: raise ValueError()
+            require(type(f) is str and f in families and type(d) is str and d in DOMAINS,'family or difficulty is not supported.')
             lo,hi=DOMAINS[d]
-            if any(type(x) is not int or not lo<=x<=hi for x in (a,b,c)): raise ValueError()
+            require(all(type(x) is int and lo<=x<=hi for x in (a,b,c)),'parameters are outside the selected difficulty range.')
             meta={k:v for k,v in families[f].items() if k not in ('family','label')}
             row=studio.make_row(unit,f,d,a,b,c,meta)
-            if row['question'] in seen or (marks and row['marks']!=marks): raise ValueError()
+            require(row['question'] not in seen,'duplicate questions.')
+            require(not marks or row['marks']==marks,'question marks do not match the plan.')
             seen.add(row['question'])
             rows.append(dict(row,mode='model',model_role='AI-designed bounded mathematical parameters; locally constructed question',
                              validation='Independent numeric check passed after AI parameter design; proposed rubric requires teacher review'))
         return rows
     except (ValueError,KeyError,TypeError,IndexError) as exc:
-        raise studio_ai.StudioAIUnavailable('AI returned an invalid question plan; no drafts saved. Try a more specific supported request.') from exc
+        raise InvalidPlan('AI plan rejected: malformed or mathematically invalid plan. No AI drafts saved.') from exc
