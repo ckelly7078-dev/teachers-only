@@ -1,10 +1,11 @@
-"""Original multi-part Foundation questions with fixed, not-to-scale diagrams.
+"""Original multi-part Foundation questions with dimension-driven mathematical diagrams.
 
 All numbers and diagram labels derive from one parameter set. No model or source
 text is required. Proposed rubrics are not official CCEA marking schemes.
 """
 from fractions import Fraction
 from math import isqrt
+from . import geometry
 
 FAMILIES = {
     'discount-budget': ('Discount and delivery budget', 'M1', 'finance', ('M1','M2','M5','M6')),
@@ -39,7 +40,7 @@ def build(family,a,b,c):
                 [f'Area = ({top} + {bottom}) x {height} / 2 = {area} m^2.',f'Cost = {area} x £{rate} = £{area*rate}.'],
                 ['(a) M1: add the two parallel sides and multiply by perpendicular height.','(a) M1: divide by 2 or use an equivalent decomposition.','(a) A1: correct area.','(b) A1: correct cost; follow through a valid multiplication of part (a).'])
     if family=='pythagoras':
-        x,y=3*a,4*a; length=5*a; rate=b+c
+        x,y,length=geometry.triangle_sides(a,b,c); rate=b+c
         return (f'A rectangular frame is {x} m wide and {y} m high. A straight brace runs from one corner to the opposite corner (see diagram). The brace material costs £{rate} per metre. (a) Find the length of the brace. (b) Find the material cost.',(length,length*rate),
                 [f'Brace length squared = {x}^2 + {y}^2 = {x*x+y*y}.',f'Length = sqrt({x*x+y*y}) = {length} m.',f'Cost = {length} x £{rate} = £{length*rate}.'],
                 ['(a) M1: use Pythagoras with the two perpendicular sides.','(a) M1: take the positive square root of their squared sum.','(a) A1: correct length.','(b) A1: correct cost; follow through a valid multiplication of part (a).'])
@@ -69,7 +70,9 @@ def validate(family,a,b,c,answer):
         return Fraction(x-delivery,price)==1-Fraction(c,20) and x+y==budget
     if family=='l-shape': return x==a*(b+c)+b*b and y==sum([x]*(c+2))
     if family=='trapezium': return x==2*a*c+b*c and y==sum([x]*(b+1))
-    if family=='pythagoras': return x>0 and x==isqrt((3*a)**2+(4*a)**2) and x*x==(3*a)**2+(4*a)**2 and y==sum([x]*(b+c))
+    if family=='pythagoras':
+        w,h,_=geometry.triangle_sides(a,b,c)
+        return x>0 and x==isqrt(w*w+h*h) and x*x==w*w+h*h and y==sum([x]*(b+c))
     if family=='map-scale': return Fraction(x,c)==a+b and y-x==x
     if family=='expected-frequency': return 1-x==Fraction(a,a+b+c) and Fraction(y,(a+b+c)*c)==x
     if family=='gradient': return y==c and x*b+y==c+a
@@ -86,14 +89,4 @@ def display(family,answer):
 
 
 def diagram(family,a,b,c):
-    """JSON geometry primitives; coordinates are schematic, never answer data."""
-    if family=='l-shape':
-        return dict(kind='schematic',alt='L-shaped floor with labelled outer rectangle and removed upper-right corner.',polygon=[[65,45],[235,45],[235,120],[405,120],[405,240],[65,240]],
-                    lines=[],labels=[[235,264,f'{a+b} m (full width)'],[33,148,f'{b+c} m'],[320,105,f'{b} m'],[265,82,f'{c} m']])
-    if family=='trapezium':
-        return dict(kind='schematic',alt='Trapezium with both parallel sides and perpendicular height labelled.',polygon=[[135,50],[335,50],[405,225],[65,225]],
-                    lines=[[135,50,135,225],[135,210,150,210],[150,210,150,225]],labels=[[235,32,f'{2*a} m'],[235,248,f'{2*(a+b)} m'],[166,142,f'{c} m']])
-    if family=='pythagoras':
-        return dict(kind='schematic',alt='Rectangular frame with width, height and unknown diagonal brace.',polygon=[[95,45],[375,45],[375,235],[95,235]],
-                    lines=[[95,235,375,45],[360,235,360,220],[360,220,375,220]],labels=[[235,256,f'{3*a} m'],[52,140,f'{4*a} m'],[248,96,'brace']])
-    return None
+    return geometry.diagram(family,a,b,c)
