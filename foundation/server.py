@@ -17,7 +17,7 @@ from .evidence import counts as examiner_counts, search as examiner_search
 from .practice import ModelUnavailable, generate, model_available
 from .review import Conflict, bounded_text, save
 from .studio import catalog as studio_catalog, generate as studio_generate
-from . import studio_ai
+from . import studio_ai, studio_prompt
 
 API = '/api/foundation'
 ASSETS = {'/':(HERE.parent/'index.html','text/html'),'/index.html':(HERE.parent/'index.html','text/html'),
@@ -94,6 +94,11 @@ def dispatch(dbpath,route,data,actor):
     if route=='review':
         with connection(dbpath) as db:
             return save(db,int(data['id']),data,actor)
+    if route=='studio-prompt':
+        rows = studio_prompt.author(dbpath,data['unit'],data['prompt'])
+        with connection(dbpath) as db, db:
+            return [dict(row,id=db.execute('INSERT INTO practice_drafts(owner,data) VALUES(?,?)',
+                        (actor,json.dumps(row))).lastrowid,state='draft') for row in rows]
     if route=='studio':
         mode = data.get('mode','local')
         if mode not in ('local','model'):
