@@ -1,6 +1,7 @@
 """Bounded, dimension-driven original maths diagrams. No model-supplied SVG."""
 import hashlib
 import json
+from math import atan2, degrees, hypot
 
 FAMILIES = ('l-shape', 'trapezium', 'pythagoras')
 LAYOUTS = tuple(range(8))
@@ -85,6 +86,7 @@ def diagram(family,a,b,c,layout=None):
                             line((u+3*nx,v+3*ny),(u+16*nx,v+16*ny))]
         label=((x+u)/2+(34 if nx else 0)*nx,(y+v)/2+(27 if ny else 0)*ny+5)
         labels.append(rnd(label)+[f'{value} m'])
+    angles=[0]*len(labels)
     if family=='trapezium':
         x=offset+top/2
         p,q=transform((x,0)),transform((x,h))
@@ -108,9 +110,11 @@ def diagram(family,a,b,c,layout=None):
                       line((r[0]+sx*size,r[1]+sy*size),(r[0],r[1]+sy*size))])
         # A label offset from the diagonal, within the frame.
         mid=((p[0]+q[0])/2,(p[1]+q[1])/2)
-        labels.append(rnd((mid[0],mid[1]-15))+['brace'])
+        dx,dy=q[0]-p[0],q[1]-p[1]; length=hypot(dx,dy)
+        labels.append(rnd((mid[0]+12*dy/length,mid[1]-12*dx/length))+['brace'])
+        angles.append(round(degrees(atan2(dy,dx)),3))
     return dict(kind='schematic',alt=alt,polygon=polygon,lines=lines,
-                dimension_lines=dimension_lines,guides=guides,labels=labels)
+                dimension_lines=dimension_lines,guides=guides,labels=labels,label_angles=angles)
 
 
 def _edge(p,q):
@@ -128,7 +132,7 @@ def _shape(d):
 
 def diagram_key(d):
     """Visual identity includes real dimensions, not unrelated question values."""
-    return _digest([_shape(d),_segments(d.get('dimension_lines',[])),_segments(d.get('guides',[])),sorted(d['labels'])])
+    return _digest([_shape(d),_segments(d.get('dimension_lines',[])),_segments(d.get('guides',[])),sorted(zip(d['labels'],d.get('label_angles',[0]*len(d['labels']))))])
 
 
 def shape_key(d):
