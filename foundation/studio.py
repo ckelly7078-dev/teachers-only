@@ -4,7 +4,7 @@ import sqlite3
 from fractions import Fraction
 from math import gcd, lcm
 from pathlib import Path
-from . import contextual
+from . import contextual, shopping
 
 # family: label, origin unit, exact skill ID, supported units
 FAMILIES = {
@@ -23,6 +23,7 @@ FAMILIES = {
     'indices': ('Product of powers', 'M6', 'm6-algebra-indices', ('M6',)),
 }
 FAMILIES.update(contextual.FAMILIES)
+FAMILIES.update(shopping.FAMILIES)
 UNITS = ('M1','M2','M5','M6')
 DIFFICULTIES = ('easy','standard','challenge')
 
@@ -70,6 +71,7 @@ def catalog(path, unit):
 
 def build(family, a, b, c):
     """Return original prompt, canonical answer, steps, proposed per-mark rubric."""
+    if family in shopping.FAMILIES: return shopping.build(a,b,c)
     if family in contextual.FAMILIES:
         return contextual.build(family,a,b,c)
     if family == 'percent':
@@ -118,6 +120,7 @@ def build(family, a, b, c):
 
 def validate(family,a,b,c,ans):
     """Independent inverse checks, enumeration and place-value reconstruction."""
+    if family in shopping.FAMILIES: return shopping.validate(a,b,c,ans)
     if family in contextual.FAMILIES: return contextual.validate(family,a,b,c,ans)
     if family=='percent': return Fraction(ans,20*b)==Fraction(a,20)
     if family=='fraction': return Fraction(ans,(a+c)*b)==Fraction(a,a+c)
@@ -145,6 +148,7 @@ def validate(family,a,b,c,ans):
 
 
 def display(family,answer):
+    if family in shopping.FAMILIES: return shopping.display(answer)
     if family in contextual.FAMILIES: return contextual.display(family,answer)
     if family=='nth-term':
         m,k=answer
@@ -172,11 +176,17 @@ def generate(path,unit,family,difficulty='standard',count=1,seed=None):
         if q in seen: continue
         if not validate(family,a,b,c,ans): raise ValueError('Mathematical validation failed')
         seen.add(q)
-        questions.append(dict(label=FAMILIES[family][0]+' - original practice',unit=unit,tier='Foundation',
+        questions.append(make_row(unit,family,difficulty,a,b,c,meta))
+        if len(questions)==count: return questions
+    raise ValueError('Could not generate enough distinct questions; reduce count')
+
+
+def make_row(unit,family,difficulty,a,b,c,meta):
+    q,ans,steps,rubric=build(family,a,b,c)
+    if not validate(family,a,b,c,ans): raise ValueError('Mathematical validation failed')
+    return dict(label=FAMILIES[family][0]+' - original practice',unit=unit,tier='Foundation',
             family=family,question=q,answer=display(family,ans),solution=steps,rubric=rubric,marks=len(rubric),
             diagram=contextual.diagram(family,a,b,c),
             mode='local',difficulty=difficulty+' (parameter range; not calibrated)',calculator='Not required by this template',
             spec=f'CCEA GCSE Mathematics (2017), section 3.1, p. {meta["spec_page"]}',
-            validation='Independent numeric check passed; wording and proposed rubric require teacher review',**meta))
-        if len(questions)==count: return questions
-    raise ValueError('Could not generate enough distinct questions; reduce count')
+            validation='Independent numeric check passed; wording and proposed rubric require teacher review',**meta)
