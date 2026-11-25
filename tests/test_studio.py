@@ -1,4 +1,5 @@
 import itertools
+from contextlib import closing
 import sqlite3
 import tempfile
 import unittest
@@ -10,7 +11,7 @@ class StudioTest(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path=Path(self.temp.name)/'fixture.sqlite'
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.executescript('''CREATE TABLE skills(id TEXT PRIMARY KEY,unit TEXT,label TEXT,page INTEGER);
             CREATE TABLE documents(sha TEXT,unit TEXT,year INTEGER,series TEXT,component TEXT);
             CREATE TABLE questions(id INTEGER,paper TEXT,scheme TEXT,num INTEGER,part TEXT,page INTEGER,scheme_page INTEGER,marks INTEGER,status TEXT,skill TEXT);
@@ -45,7 +46,7 @@ class StudioTest(unittest.TestCase):
         self.assertEqual([r['id'] for r in row['sources']],[1])
         self.assertEqual(row['evidence_level'],'related-skill-source-checked')
         self.assertEqual(generate(self.path,'M1','area')[0]['evidence_level'],'specification-only')
-        with sqlite3.connect(self.path) as db: db.execute("UPDATE pairs SET status='review'")
+        with closing(sqlite3.connect(self.path)) as db, db: db.execute("UPDATE pairs SET status='review'")
         self.assertEqual(generate(self.path,'M1','percent')[0]['sources'],[])
 
     def test_reject_invalid(self):
