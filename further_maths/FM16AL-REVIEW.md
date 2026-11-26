@@ -1,0 +1,9 @@
+# FM-16AL — final representative vector review
+
+Reviewed variant-one prompts and answers of the remaining 17 vector pathways (102 designs), against the recorded curriculum and teaching mappings. The skew T6 challenge is replaced in three variants with a supporting-plane construction, coplanarity condition and proof of unique intersection, differentiating it from direct coordinate classification. Vector-combinations T6 remains enrichment-only. Other queued progression and overlap signals remain open, including generic quadratic range tasks for scalar product and triangle area.
+
+Systematic representative review now covers 117/117 pathways and 702/702 designs. Scope counts: 117 prerequisite bridges, 117 conceptual diagnostics, 351 syllabus-linked candidates, 104 challenge candidates and 13 enrichment-only. Zero pending scope decisions, zero teacher approvals. These are editorial classifications, not a fresh specification inspection, empirical calibration or full certification of every variant, solution or marking rubric.
+
+Local verification: four targeted/preservation tests and one full-bank test passed. All 2,106 stored payloads, structured facts, marks and original-origin safeguards rechecked, including every earlier overlay; all 35 source hashes verified. All other questions preserved; 69 historical item versions retained. Parent private DB SHA-256 e0aa15ee4ae91d92cea8178869080674eb578e97772d3319653229bc45617800; new DB SHA-256 cb78fd4644920c80f61ba02cace6a9543cdbf05a337a8de519353e98fbad10a8. No new questions.
+
+Use AL overlay for its TARGETS before AK, AJ, AI, AH, AG, AF, AE, AD and original generators. Runtime and standalone historical verifier integration pending. Separate historical suites and browser tests not rerun. Private DB and source evidence stay offline. No merge or deployment. Next: consolidate active difficulty resolver and verification, close high-priority progression/marking issues and document release gates before FM-17.
