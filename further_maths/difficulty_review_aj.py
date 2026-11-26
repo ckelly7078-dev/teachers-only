@@ -1,0 +1,25 @@
+"""Representative review of remaining matrix pathways; provisional scope."""
+NOTES={
+'inverse-systems':('Scalar reciprocal.','Explain failure of inverse at singularity.','Solve and verify specified system.','Use three-variable inverse.','Recover RHS using solution constraint.','Revised: compare two RHS under one matrix, classify singular compatibility and prove independence in regular case.'),
+'inverse-three':('Triangular substitution.','Diagnose missing cross term.','Construct and verify inverse.','Apply inverse to system.','Recover parameter from inverse entry.','Classify invertibility and every homogeneous singular family.'),
+'inverse-two':('Scalar reversal.','Check inverse candidate by multiplication.','Construct and verify inverse.','Recover point using inverse.','Infer parameter from inverse entry.','Revised: reconstruct two diagonal entries from two inverse constraints; classify counts and verify invertibility.'),
+'matrix-add-subtract':('Signed subtraction.','Check equal dimensions.','Entrywise signed expression.','Recover matrices from sum and difference.','Recover unknowns via symmetry and diagonal sum.','Unique symmetric/skew decomposition and singularity; enrichment.'),
+'matrix-conformability':('Read dimensions.','Distinguish addition and multiplication.','Determine defined operations.','Recover dimensions of chain.','Use entry count and incompatible product.','Enumerate dimension quadruples under mixed constraints.'),
+'matrix-equation':('Undo scalar multiplication.','Diagnose inverse order.','Solve left equation.','Compare left and right equations.','Recover parameter from symmetry.','Classify simultaneous left/right equations including singular case.'),
+'matrix-products':('Row-column scalar sum.','Reject entrywise multiplication.','Rectangular product.','Reconstruct unknown row.','Recover one-sided inverse and check reverse order.','All rectangular right inverses and idempotence; enrichment.'),
+'nonunique-geometry':('Read free coordinate.','Distinguish plane and line.','Find common line.','Find common plane with two directions.','Reconstruct plane containing line.','Classify empty, line and plane; no unique point.'),
+'nonunique-set':('Solve a single equation.','Diagnose dependence.','Parameterise dependent system.','Impose coordinate on line.','Distance condition gives two points.','Nonnegative solutions and sharp interval endpoints.'),
+'orientation':('Signed product.','Distinguish area from orientation.','Use determinant sign.','Track orientation and area through composition.','Recover parameter from area and sign.','Classify all orientation and collapse intervals; retain canonical determinant-sign task.'),
+'scalar-matrix':('Scale signed numbers.','Correct incomplete scaling.','Entrywise scalar product.','Recover two scalar coefficients.','Infer scalar from unsigned area.','Classify proportionality including zero matrices.'),
+'singular-condition':('Solve factored quadratic.','Reject nonzero entries imply nonsingularity.','Solve determinant zero.','Combine singularities of product factors.','Recover parameters from two singular matrices.','Classify singular parameters with discriminant threshold; overlap with det-two noted.'),
+'system-classification':('Compare equations.','Distinguish singular from inconsistent.','Classify dependent systems.','Reduce three equations.','Recover compatibility RHS.','Canonical parameter-system classification retained.'),
+'system-consistency':('Eliminate two unknowns.','Identify contradiction.','Classify concrete parameter values.','Compare plane intersections.','Find full family for every parameter.','AE homogeneous two-switch revision; classify free parameter counts.'),
+' three-plane-unique'.strip():('Test point membership.','Reject pairwise implies unique.','Find unique point.','Eliminate and verify determinant.','Recover parameter from prescribed point.','AE reconstruct third plane using distance and uniqueness.'),
+'three-system':('Back-substitute.','Identify inconsistent dependence.','Solve coupled system.','Translate contextual constraints.','Recover RHS from extra constraint.','AE coupled elimination with two singular values and different compatibility conditions.'),
+'two-variable-system':('Solve scalar equation.','Reject uniqueness from dependence.','Solve by elimination.','Translate ticket constraints.','Recover parameter from ratio.','Classify nonnegative solutions with singular boundaries.'),
+'zero-matrix':('Additive zero.','Distinguish zero addition and product.','Solve cancellation.','Exhibit zero product of nonzero factors.','Recover singular parameter from null vector.','Classify all annihilating matrices via their columns; distinct from single-vector collapse.'),
+}
+def scope(path,tier):
+    if path not in NOTES or tier not in range(1,7): raise ValueError('Not reviewed in FM-16AJ')
+    if tier==6 and path in ('matrix-add-subtract','matrix-products'): return 'enrichment_only'
+    return {1:'prerequisite_bridge_reviewed',2:'conceptual_diagnostic_reviewed',3:'syllabus_linked_candidate',4:'syllabus_linked_candidate',5:'syllabus_linked_candidate',6:'challenge_candidate'}[tier]
