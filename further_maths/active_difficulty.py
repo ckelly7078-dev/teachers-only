@@ -8,7 +8,7 @@ from pathlib import Path
 from skill_detail import detail_map
 
 BASES = ('', *('abcdefghijklmnopqrstuvwxyz'[1:]), 'aa', 'ab')
-OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq')
+OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as')
 REVIEWS = ('af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al')
 SCOPES = {'prerequisite_bridge_reviewed': 117, 'conceptual_diagnostic_reviewed': 117,
           'syllabus_linked_candidate': 351, 'challenge_candidate': 104, 'enrichment_only': 13}
@@ -41,7 +41,7 @@ class Resolver:
                 require(path in self.bases and tier in range(1, 7), 'Invalid overlay target')
                 require((path, tier) not in self.overlays, 'Overlapping revisions require explicit migration')
                 self.overlays[path, tier] = (tag, bank.revise, oracle.check)
-        require(len(self.overlays) == 34, 'Revision coverage mismatch')
+        require(len(self.overlays) == 38, 'Revision coverage mismatch')
         for tag in REVIEWS:
             review = importlib.import_module('difficulty_review_' + tag)
             for path, notes in review.NOTES.items():
