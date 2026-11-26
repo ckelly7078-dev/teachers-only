@@ -1,0 +1,14 @@
+# FM-16AF — further algebra representative difficulty and scope review
+
+This checkpoint reviewed all 14 further algebra pathways (84 representative variant-one prompts and answers, tier-four and tier-five representative worked solutions, tier-six representative worked solutions and all three tier-six final answers). Scope judgments use the recorded curriculum and teaching mappings, not a new direct examination-paper or specification review. This is not certification of all 252 algebra variants or all written solutions and rubrics.
+
+Three cells (nine questions) were redesigned:
+- scaled-roots T4: discriminate between two candidate quadratics with the same sum by checking the scaling of the product, including a nonmonic starting equation. The correct candidate is not always first.
+- root-squares T6: classify all admissible products, equation counts, root signs, zero and repeated roots using both squared-sum and discriminant constraints.
+- reciprocal T6: derive all real reciprocal transformations preserving the root multiset, separating fixed roots, exchanged roots and repeated-root families with domain restrictions. Enrichment only; not default examination practice.
+
+The cube-sums calculus challenge remains enrichment only. New representative scope labels distinguish prerequisite bridges, conceptual diagnostics, syllabus-linked candidates and challenge candidates. Of the 84 algebra designs: 14 prerequisite, 14 diagnostic, 42 syllabus-linked candidates, 12 challenge candidates, 2 enrichment only. Across all 702 designs: 607 scope-review-pending, 13 enrichment only, and 82 other reviewed candidate/bridge/diagnostic classifications. No teacher approval or examination difficulty certification.
+
+Local verification: 11 AF tests and 14 AE regression tests passed, including a full 2,106-item structured-answer and stored-payload recheck, nine corrupt-answer rejection/boundary cases, all 35 source hashes, preservation of unchanged records and 33 recoverable earlier item payloads. The initial reciprocal boundary tests mistakenly used a real-root-only solver; corrected to polynomial roots including complex roots. No question additions. Parent private DB SHA-256 d72087480d2475c34ed632e9c4294bad7e5690ab1705f979245f071dfa654bc0; AF private DB SHA-256 63ded8b53ebdff41af20cb46733c6e37974e13e8ce260d9dc7c33b40ebc68ce4.
+
+Use AF overlay for its TARGETS, then AE, AD, then original generators; runtime integration and historical standalone verifier integration remain pending. Typed provisional method/accuracy/reasoning marking now covers 30 revised items. Earlier historical suites beyond AE and browser tests not rerun. The original public snapshot and its checksum manifest remain unchanged. Keep source material and private DB offline. No merge, deployment or teacher approval. Next: representative complex-number difficulty and scope review. FM-17 remains gated.
