@@ -1,0 +1,23 @@
+"""FM-16AK: vector reconstruction and two-plane intersection challenges."""
+import sympy as s
+from calibration_bank import L
+from calibration_b_bank import make
+TARGETS={('cross-product',6),('line-plane-intersection',6)}
+def revise(path,tier,v):
+    if (path,tier) not in TARGETS or v not in (1,2,3): raise ValueError('Not FM-16AK')
+    a=s.Integer(v+1); b=a+2; h,k=s.symbols('h k',real=True); p=make(path,tier,v)
+    if path=='cross-product':
+        U=s.Matrix([1,a,0]); V=s.Matrix([0,1,b]); W=s.Matrix([0,0,1]); A=U.cross(W); B=V.cross(U); C=V.cross(W); X=W+h*U
+        q=f'Let u={L(U)}, v={L(V)}. For real h,k determine all vectors w satisfying u cross w={L(A)} and v cross w={L(h*B+k*C)}. Prove exactly when the two requirements are compatible and when the solution is unique.'
+        ans=f'Exactly when k=1; unique w={L(X)}. Otherwise none.'
+        steps=[f'The vector {L(W)} satisfies the first requirement. The difference w-{L(W)} must have zero cross product with nonzero u, hence w={L(W)}+t u.',f'Substituting into the second requirement gives {L(C)}+t {L(B)}=h {L(B)}+k {L(C)}.',f'The two cross products are independent: the third component of {L(B)} is -1, whereas {L(C)} has third component zero and first component 1. Thus t=h and k=1.',f'For k=1 the vector {L(X)} satisfies both equations. Otherwise the independent coefficient constraints contradict each other. This proves completeness and uniqueness.']
+        facts=[1,*X]; hints=['Find a particular solution of the first equation, then add a multiple of u.','Compare the independent cross products in the second equation.']; mistake='Treating two individually possible cross-product constraints as automatically compatible.'; rationale='Combine two cross-product equations using the full first solution family and prove compatibility and uniqueness.'
+        rub=[('M',2,'Obtain the full first solution family.'),('M',1,'Substitute into the second cross product.'),('R',2,'Prove independence and derive both coefficient conditions.'),('A',1,'Give and verify the unique solution, excluding all others.')]
+    else:
+        H=h-a; t1=(H-b)/(1+k); t2=(H+b)/(1-k); P=s.Matrix([a,b,0]); D=s.Matrix([1,k,1]); X=P+t1*D; Y=P+t2*D
+        q=f'For real h,k consider L with point {L(P)} and direction {L(D)}, and planes x+y=h and x-y=h. Classify each intersection with L (empty, unique point or whole line). When both are unique, find both points and determine exactly when they coincide. Also classify the common intersection of L with both planes in the exceptional cases. Prove completeness.'
+        ans=f'For k not equal to +/-1: points {L(X)} and {L(Y)}, coinciding exactly when k(h-{a})=-{b}. At k=-1 the first plane contains L if h={a+b}, otherwise misses it; the second intersects uniquely at parameter (h-{a}+{b})/2. At k=1 the second contains L if h={a-b}, otherwise misses it; the first intersects uniquely at (h-{a}-{b})/2. In each exceptional case the common intersection is the other unique point if L is contained, otherwise empty.'
+        steps=[f'Substitute x={a}+t, y={b}+kt, z=t into each plane: (1+k)t=h-{a}-{b} and (1-k)t=h-{a}+{b}.',f'For k not equal to +/-1 each equation gives a unique parameter, respectively {L(t1)} and {L(t2)}, giving the stated points. Equating the parameters and multiplying by both nonzero denominators gives k(h-{a})=-{b}.',f'When k=-1 the first equation becomes 0=h-{a+b}; if true the whole line lies in that plane, otherwise it misses it. The second equation still has a unique solution.',f'When k=1 the second equation becomes 0=h-{a-b}; if true the whole line lies in that plane, otherwise it misses it. The first equation still has a unique solution.', 'In each exceptional case the common intersection is the unique point from the other plane if the line is contained, and empty otherwise. The parameter cases exhaust all real k.']
+        facts=[t1,t2,*X,*Y,-1,1,a+b,a-b,-b]; hints=['Substitute the same line parameter into both plane equations.','Separate the two vanishing coefficients before equating the parameters.']; mistake='Cancelling 1+k or 1-k without considering a whole-line intersection.'; rationale='Compare two line-plane intersections with distinct exceptional values and an additional coincidence constraint.'
+        rub=[('M',2,'Obtain both parameter equations.'),('A',2,'Find both regular intersection points.'),('R',1,'Derive the exact coincidence criterion.'),('R',2,'Classify both exceptional cases and common intersections completely.')]
+    p.update(question_latex=q,final_answer_latex=ans,worked_solution_latex=steps,progressive_hints=hints,likely_mistake=mistake,demand_rationale=rationale,facts=[str(s.simplify(f)) for f in facts],rubric=[{'type':t,'marks':m,'criterion':c} for t,m,c in rub]);return p
