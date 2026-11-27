@@ -10,7 +10,7 @@ class Tests(unittest.TestCase):
 
     def test_registry(self):
         self.assertEqual(len(self.r.bases), 117)
-        self.assertEqual(len(self.r.overlays), 38)
+        self.assertEqual(len(self.r.overlays), 92)
         self.assertEqual(set(self.r.reviews), set(self.r.bases))
 
     def test_all_modes(self):
@@ -24,7 +24,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(counts, {'learning_preview': 585, 'exam_candidate_preview': 351, 'challenge_preview': 104, 'enrichment_preview': 13, 'approved_exam': 0})
 
     def test_revisions(self):
-        for path, tier, tag in [('complex-division',6,'AD'), ('composition-order',6,'AE'), ('scaled-roots',4,'AF'), ('cartesian-sums',6,'AG'), ('modulus-constraints',6,'AH'), ('collapse',6,'AI'), ('inverse-two',6,'AJ'), ('cross-product',6,'AK'), ('skew',6,'AL'), ('polar-products',5,'AN'), ('conjugate-find',6,'AN'), ('cartesian-product',6,'AN'), ('line-plane-angle',6,'AO'), ('perpendicular-parameter',6,'AO'), ('scalar-product',6,'AO'), ('triangle-area',6,'AO'), ('singular-condition',6,'AP'), ('justify-skew',6,'AP'), ('line-line-distance',6,'AP'), ('plane-intersection-direction',6,'AQ'), ('root-sum-product',3,'AS'), ('cartesian-product',3,'AS'), ('det-two',3,'AS'), ('scalar-product',3,'AS'), ('root-squares',3,'AB')]:
+        for path, tier, tag in [('complex-division',6,'AD'), ('composition-order',6,'AE'), ('scaled-roots',4,'AF'), ('cartesian-sums',6,'AG'), ('modulus-constraints',6,'AH'), ('collapse',6,'AI'), ('inverse-two',6,'AJ'), ('cross-product',6,'AK'), ('skew',6,'AL'), ('polar-products',5,'AN'), ('conjugate-find',6,'AN'), ('cartesian-product',6,'AN'), ('line-plane-angle',6,'AO'), ('perpendicular-parameter',6,'AO'), ('scalar-product',6,'AO'), ('triangle-area',6,'AO'), ('singular-condition',6,'AP'), ('justify-skew',6,'AP'), ('line-line-distance',6,'AP'), ('plane-intersection-direction',6,'AQ'), ('root-sum-product',3,'AS'), ('cartesian-product',3,'AS'), ('det-two',3,'AS'), ('scalar-product',3,'AS'), ('root-squares',3,'AU')]:
             mode = 'challenge_preview' if tier == 6 else 'exam_candidate_preview'
             item = self.r.resolve(path,tier,1,mode=mode)
             self.assertEqual(item['revision'], 'FM-16'+tag)
