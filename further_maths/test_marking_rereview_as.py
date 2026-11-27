@@ -9,7 +9,10 @@ from marking_review import fingerprint, inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_twelve(self):
-        result = validate_batch(list(records()))
+        class ASReviewResolver(Resolver):
+            def _resolve(self, path, tier, variant):
+                return self._resolve_version(path, tier, variant, 'as')
+        result = validate_batch(list(records()), ASReviewResolver())
         self.assertEqual(result['statuses'], {'editorial_review_recorded': 12})
         self.assertEqual(result['teacher_approved'], 0)
 
@@ -29,7 +32,7 @@ class Tests(unittest.TestCase):
                 self.assertEqual(changed, {'rubric', 'likely_mistake'} if path == 'det-two' else {'rubric'})
                 self.assertEqual(sum(x['marks'] for x in old['rubric']), 2)
                 self.assertEqual(sum(x['marks'] for x in new['rubric']), 2)
-                item = r.resolve(path, tier, v, mode='exam_candidate_preview')
+                item = r._resolve_version(path, tier, v, 'as')
                 self.assertEqual(item['payload'], new)
                 self.assertEqual(inventory_entry(item)['status'], 'typed_provisional')
                 self.assertFalse(item['teacher_approved'])

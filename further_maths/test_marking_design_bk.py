@@ -11,7 +11,7 @@ from marking_review import fingerprint,inventory_entry
 
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.old=Resolver(historical_through='bj');cls.r=Resolver()
+    def setUpClass(cls):cls.old=Resolver(historical_through='bj');cls.r=Resolver(historical_through='bk')
     def test_every_variant(self):
         self.assertEqual(len(TARGETS),32);self.assertEqual(len(NEW_DEMAND),13)
         for p,t in TARGETS:
@@ -35,8 +35,8 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Stale'):validate_batch([batch[0]],self.old)
     def test_historical_closed(self):
         with self.assertRaisesRegex(ValueError,'Historical'):self.old.resolve('polar-geometry',3,1,mode='learning_preview')
-        self.assertEqual(self.r.resolve('polar-geometry',3,1,mode='learning_preview')['revision'],'FM-16BK')
-        with self.assertRaises(ValueError):self.r.resolve('polar-geometry',3,1,mode='approved_exam')
+        self.assertEqual(Resolver().resolve('polar-geometry',3,1,mode='learning_preview')['revision'],'FM-16BM4')
+        with self.assertRaises(ValueError):Resolver().resolve('polar-geometry',3,1,mode='approved_exam')
     def test_invalid_targets(self):
         for p,t,v in [('polar-geometry',3,True),('polar-geometry',3,4),('polar-geometry',3.0,1),('polar-geometry',2,1)]:
             with self.assertRaises(ValueError):revise(p,t,v)

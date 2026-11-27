@@ -25,7 +25,7 @@ PLAIN_SIGNALS = {
     'plain_function_notation': re.compile(r'\b(?:Re|Im|arg|cos|sin)\('),
 }
 # Reject unexpected control sequences rather than executing arbitrary TeX.
-ALLOWED_MATH_COMMANDS = frozenset('frac sqrt pi left right operatorname geq ne theta leq mapsto Re pm'.split())
+ALLOWED_MATH_COMMANDS = frozenset('frac sqrt pi left right operatorname geq ne theta leq mapsto Re pm delta arg'.split())
 
 
 def split_math(text):
