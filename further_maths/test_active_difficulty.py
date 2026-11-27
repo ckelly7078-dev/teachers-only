@@ -10,7 +10,7 @@ class Tests(unittest.TestCase):
 
     def test_registry(self):
         self.assertEqual(len(self.r.bases), 117)
-        self.assertEqual(len(self.r.overlays), 195)
+        self.assertEqual(len(self.r.overlays), 234)
         self.assertEqual(set(self.r.reviews), set(self.r.bases))
 
     def test_all_modes(self):
