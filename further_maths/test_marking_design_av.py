@@ -6,7 +6,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_variants(self):
-        r=Resolver();self.assertEqual(len(TARGETS),26)
+        r=Resolver(historical_through='bh');self.assertEqual(len(TARGETS),26)
         for path in BANKS:
             for tier in (5,6):
                 for v in (1,2,3):
