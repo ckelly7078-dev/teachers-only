@@ -8,7 +8,7 @@ from pathlib import Path
 from skill_detail import detail_map
 
 BASES = ('', *('abcdefghijklmnopqrstuvwxyz'[1:]), 'aa', 'ab')
-OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az', 'ba', 'bb', 'bc', 'bd', 'be')
+OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az', 'ba', 'bb', 'bc', 'bd', 'be', 'bf')
 # Each successor must name its exact current predecessor; no implicit overwrite.
 SUCCESSIONS = {('angle-units', 6, 'ba'): 'ad'}
 REVIEWS = ('af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al')
@@ -53,7 +53,7 @@ class Resolver:
                 self.overlays[key] = (tag, bank.revise, oracle.check)
                 self.versions[path, tier, tag] = self.overlays[key]
         require(used_successions == set(SUCCESSIONS), 'Unused succession authorisation')
-        require(len(self.overlays) == 503, 'Revision coverage mismatch')
+        require(len(self.overlays) == 559, 'Revision coverage mismatch')
         for tag in REVIEWS:
             review = importlib.import_module('difficulty_review_' + tag)
             for path, notes in review.NOTES.items():
