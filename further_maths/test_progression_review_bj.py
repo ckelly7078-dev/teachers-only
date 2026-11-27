@@ -6,7 +6,7 @@ from progression_review_bj import bind, validate, PRIORITIES
 
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.old=Resolver(historical_through='bh');cls.r=Resolver()
+    def setUpClass(cls):cls.old=Resolver(historical_through='bh');cls.r=Resolver(historical_through='bj')
     def test_version_binding(self):
         old=bind(self.old,'solve-quartic',4,'successor_implemented','Coefficient and complete root construction','priority_all_variants')
         new=bind(self.r,'solve-quartic',4,'successor_implemented','Coefficient and complete root construction','priority_all_variants')

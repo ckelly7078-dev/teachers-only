@@ -7,7 +7,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_variants(self):
-        r=Resolver();self.assertEqual(len(TARGETS),54)
+        r=Resolver(historical_through='bh');self.assertEqual(len(TARGETS),54)
         for path,tier in TARGETS:
             for v in (1,2,3):
                 with self.subTest(path=path,tier=tier,v=v):
@@ -19,7 +19,7 @@ class Tests(unittest.TestCase):
                     self.assertEqual(inventory_entry(item)['status'],'typed_provisional')
                     self.assertFalse(item['teacher_approved'])
     def test_prior_layers_unchanged(self):
-        r=Resolver()
+        r=Resolver(historical_through='bh')
         for path,tier,tag in [('root-sum-product',3,'AS'),('scaled-roots',4,'AF')]:
             self.assertNotIn((path,tier),TARGETS)
             for v in (1,2,3):self.assertEqual(r._resolve(path,tier,v)['revision'],'FM-16'+tag)

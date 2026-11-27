@@ -15,7 +15,7 @@ from revision_history import replace_authorised, digest, verify_history, atomic
 class Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.r=Resolver();cls.old=Resolver(historical_through='bh')
+        cls.r=Resolver(historical_through='bj');cls.old=Resolver(historical_through='bh')
     def test_every_variant(self):
         self.assertEqual(len(TARGETS),10)
         ids=set()
@@ -47,8 +47,8 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Stale'):validate_batch([row],self.old)
     def test_historical_selection_closed(self):
         with self.assertRaisesRegex(ValueError,'Historical'):self.old.resolve('angle-units',5,1,mode='exam_candidate_preview')
-        self.assertEqual(self.r.resolve('angle-units',5,1,mode='exam_candidate_preview')['revision'],'FM-16BJ')
-        with self.assertRaises(ValueError):self.r.resolve('angle-units',5,1,mode='approved_exam')
+        self.assertEqual(Resolver().resolve('angle-units',5,1,mode='exam_candidate_preview')['revision'],'FM-16BJ')
+        with self.assertRaises(ValueError):Resolver().resolve('angle-units',5,1,mode='approved_exam')
         with self.assertRaises(ValueError):Resolver(historical_through='invented')
     def test_explicit_mark_succession(self):
         db=sqlite3.connect(':memory:');db.execute('pragma foreign_keys=on')

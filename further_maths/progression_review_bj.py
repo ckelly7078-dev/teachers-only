@@ -24,7 +24,7 @@ def bind(r,path,tier,decision,note,kind):
 
 
 def validate(rows,old=None,current=None):
-    old=old or Resolver(historical_through='bh');current=current or Resolver()
+    old=old or Resolver(historical_through='bh');current=current or Resolver(historical_through='bj')
     seen=set();counts=collections.Counter();equal_keys=set();priority_keys=set();next_keys=set()
     for row in rows:
         p,t,k,d=row['path'],row['from_tier'],row['kind'],row['decision']
