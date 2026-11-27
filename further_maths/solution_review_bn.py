@@ -10,7 +10,7 @@ from solution_review_bm import escape_text, PLAIN_SIGNALS, log_flags
 
 PATHS = ('basis-images', 'describe-transform', 'figure-images', 'identity-operations',
          'matrix-add-subtract', 'matrix-conformability', 'matrix-products', 'scalar-matrix', 'zero-matrix')
-COMMANDS = frozenset(('left', 'right', 'begin', 'end', 'frac', 'sqrt', 'times'))
+COMMANDS = frozenset(('left', 'right', 'begin', 'end', 'frac', 'sqrt', 'times', 'rho', 'pm'))
 ENVIRONMENTS = frozenset(('matrix', 'pmatrix'))
 
 

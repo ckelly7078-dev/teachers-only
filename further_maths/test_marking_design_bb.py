@@ -9,7 +9,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.r=Resolver()
+    def setUpClass(cls):cls.r=Resolver(historical_through='bh')
 
     def test_all_variants(self):
         self.assertEqual(len(TARGETS),40)

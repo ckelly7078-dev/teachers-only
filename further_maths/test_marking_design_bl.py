@@ -8,7 +8,7 @@ from marking_review import fingerprint
 from marking_batch import validate_batch
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.r=Resolver();cls.old=Resolver(historical_through='bk')
+    def setUpClass(cls):cls.r=Resolver(historical_through='bl');cls.old=Resolver(historical_through='bk')
     def test_all_variants(self):
         self.assertEqual(len(TARGETS),11);self.assertEqual(len(NEW_DEMAND),5)
         for p,t in TARGETS:
