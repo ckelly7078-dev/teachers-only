@@ -8,9 +8,20 @@ from pathlib import Path
 from skill_detail import detail_map
 
 BASES = ('', *('abcdefghijklmnopqrstuvwxyz'[1:]), 'aa', 'ab')
-OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az', 'ba', 'bb', 'bc', 'bd', 'be', 'bf', 'bg', 'bh')
+OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az', 'ba', 'bb', 'bc', 'bd', 'be', 'bf', 'bg', 'bh', 'bj')
 # Each successor must name its exact current predecessor; no implicit overwrite.
-SUCCESSIONS = {('angle-units', 6, 'ba'): 'ad'}
+SUCCESSIONS = {('angle-units', 6, 'ba'): 'ad',
+    ('angle-units',5,'bj'):'ay', ('argument-range',5,'bj'):'ay',
+    ('cartesian-to-polar',5,'bj'):'az', ('complex-division',5,'bj'):'aw',
+    ('conjugate-product',4,'bj'):'aw', ('inverse-systems',5,'bj'):'be',
+    ('related-solids',5,'bj'):'bh', ('solve-cubic',5,'bj'):'ax',
+    ('solve-quartic',5,'bj'):'ax', ('vector-plane',5,'bj'):'bg'}
+# Exact, separately authorised old/new mark totals. All other successions preserve marks.
+MARK_SUCCESSIONS = {('angle-units',5,'bj'):(2,3), ('argument-range',5,'bj'):(2,5),
+    ('cartesian-to-polar',5,'bj'):(3,5), ('complex-division',5,'bj'):(2,6),
+    ('conjugate-product',4,'bj'):(2,5), ('inverse-systems',5,'bj'):(3,6),
+    ('related-solids',5,'bj'):(2,6), ('solve-cubic',5,'bj'):(3,6),
+    ('solve-quartic',5,'bj'):(3,7), ('vector-plane',5,'bj'):(3,6)}
 REVIEWS = ('af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al')
 SCOPES = {'prerequisite_bridge_reviewed': 117, 'conceptual_diagnostic_reviewed': 117,
           'syllabus_linked_candidate': 351, 'challenge_candidate': 104, 'enrichment_only': 13}
@@ -25,7 +36,12 @@ def require(condition, message):
 
 
 class Resolver:
-    def __init__(self):
+    def __init__(self, *, historical_through=None):
+        # Explicit, read-only historical evidence view; never a selection route.
+        require(historical_through is None or historical_through == 'bh', 'Unknown historical view')
+        self.historical_through = historical_through
+        tags = OVERLAYS if historical_through is None else OVERLAYS[:OVERLAYS.index(historical_through)+1]
+        successions = SUCCESSIONS if historical_through is None else {key: value for key, value in SUCCESSIONS.items() if key[2] in tags}
         self.bases, self.overlays, self.reviews, self.versions = {}, {}, {}, {}
         used_successions = set()
         for suffix in BASES:
@@ -37,7 +53,7 @@ class Resolver:
                 self.bases[path] = (skill, bank.make, oracle.check)
         skills = {f'{concept}.{key}' for concept, entries in detail_map().items() for key, _ in entries}
         require(len(self.bases) == 117 and {x[0] for x in self.bases.values()} == skills, 'Skill coverage mismatch')
-        for tag in OVERLAYS:
+        for tag in tags:
             bank = importlib.import_module('difficulty_revision_' + tag)
             oracle = importlib.import_module('difficulty_revision_' + tag + '_oracle')
             for path, tier in bank.TARGETS:
@@ -46,13 +62,13 @@ class Resolver:
                 succession = (path, tier, tag)
                 previous = self.overlays.get(key)
                 if previous is not None:
-                    require(SUCCESSIONS.get(succession) == previous[0], 'Overlapping revisions require exact predecessor authorisation')
+                    require(successions.get(succession) == previous[0], 'Overlapping revisions require exact predecessor authorisation')
                     used_successions.add(succession)
                 else:
-                    require(succession not in SUCCESSIONS, 'Authorised predecessor missing')
+                    require(succession not in successions, 'Authorised predecessor missing')
                 self.overlays[key] = (tag, bank.revise, oracle.check)
                 self.versions[path, tier, tag] = self.overlays[key]
-        require(used_successions == set(SUCCESSIONS), 'Unused succession authorisation')
+        require(used_successions == set(successions), 'Unused succession authorisation')
         require(len(self.overlays) == 702, 'Revision coverage mismatch')
         for tag in REVIEWS:
             review = importlib.import_module('difficulty_review_' + tag)
@@ -76,6 +92,7 @@ class Resolver:
         return self.scope(path, tier) in MODES[mode]
 
     def resolve(self, path, tier, variant, *, mode):
+        require(self.historical_through is None, 'Historical resolver cannot select questions')
         self._key(path, tier, variant)
         require(self.eligible(path, tier, mode), 'Design not eligible for requested mode')
         return self._resolve(path, tier, variant)

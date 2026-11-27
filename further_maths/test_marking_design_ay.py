@@ -13,7 +13,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_variants(self):
-        r=Resolver(); self.assertEqual(len(TARGETS),39)
+        r=Resolver(historical_through='bh'); self.assertEqual(len(TARGETS),39)
         for path in BANKS:
             for tier in range(1,7):
                 for v in (1,2,3):
@@ -39,7 +39,7 @@ class Tests(unittest.TestCase):
                             self.assertEqual(inventory_entry(item)['status'],'typed_provisional')
 
     def test_frozen_batch(self):
-        r=Resolver(); batch=list(records(r));self.assertEqual(len(batch),126)
+        r=Resolver(historical_through='bh'); batch=list(records(r));self.assertEqual(len(batch),126)
         self.assertTrue(all(x['review_basis']=='shared_design_plus_variant_oracle' for x in batch))
         stale=[x for x in batch if x['id'].startswith('CAL.angle-units.T6.')]
         self.assertEqual(len(stale),3)
@@ -48,7 +48,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(validate_batch([x for x in batch if x not in stale],r)['statuses'],{'editorial_review_recorded':123})
 
     def test_stale_evidence(self):
-        r=Resolver(); original=r._resolve
+        r=Resolver(historical_through='bh'); original=r._resolve
         def changed(path,tier,v):
             i=original(path,tier,v)
             if (path,tier,v)==('argand-coordinates',1,1): i['payload']['likely_mistake']+=' changed'
@@ -95,7 +95,7 @@ class Tests(unittest.TestCase):
             self.assertNotEqual(*roots);self.assertTrue(all(s.cos(t-phase)==0 for t in roots))
 
     def test_presentation_delimiters(self):
-        r=Resolver()
+        r=Resolver(historical_through='bh')
         for path in BANKS:
             for tier in range(1,7):
                 for v in (1,2,3):

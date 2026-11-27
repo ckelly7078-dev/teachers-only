@@ -12,7 +12,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_variants(self):
-        r=Resolver(); self.assertEqual(len(TARGETS),41)
+        r=Resolver(historical_through='bh'); self.assertEqual(len(TARGETS),41)
         for path in BANKS:
             for tier in range(1,7):
                 for v in (1,2,3):
@@ -34,13 +34,13 @@ class Tests(unittest.TestCase):
                             self.assertEqual(p,ah_revise(path,tier,v))
 
     def test_frozen_review_batch(self):
-        r=Resolver(); batch=list(records(r))
+        r=Resolver(historical_through='bh'); batch=list(records(r))
         self.assertEqual(len(batch),126)
         self.assertTrue(all(x['review_basis']=='shared_design_plus_variant_oracle' for x in batch))
         self.assertEqual(validate_batch(batch,r)['statuses'],{'editorial_review_recorded':126})
 
     def test_frozen_review_rejects_changed_payload(self):
-        r=Resolver(); original=r._resolve
+        r=Resolver(historical_through='bh'); original=r._resolve
         def changed(path,tier,v):
             i=original(path,tier,v)
             if (path,tier,v)==('complex-discriminant',1,1):
@@ -55,7 +55,7 @@ class Tests(unittest.TestCase):
             with self.assertRaises(ValueError): revise(p,t,v)
 
     def test_boundary_multiplicities(self):
-        x=s.Symbol('x'); r=Resolver()
+        x=s.Symbol('x'); r=Resolver(historical_through='bh')
         def counts(P):
             roots=s.roots(P,x)
             self.assertEqual(sum(roots.values()),s.degree(P,x))
@@ -94,7 +94,7 @@ class Tests(unittest.TestCase):
             self.assertIn('exactly two',revise('conjugate-deduction',4,v)['worked_solution_latex'][0])
 
     def test_presentation_delimiters(self):
-        r=Resolver()
+        r=Resolver(historical_through='bh')
         for path in BANKS:
             for tier in range(1,7):
                 for v in (1,2,3):

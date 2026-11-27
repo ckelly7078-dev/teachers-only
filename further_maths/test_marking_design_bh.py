@@ -11,7 +11,7 @@ def mat(x):return s.Matrix(x['matrix']).applyfunc(s.sympify)
 
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.r=Resolver()
+    def setUpClass(cls):cls.r=Resolver(historical_through='bh')
 
     def facts(self,p,v):return self.r._resolve(p,6,v)['payload']['facts']
 

@@ -11,7 +11,7 @@ def mat(x):return s.Matrix(x['matrix']).applyfunc(s.sympify)
 
 class Tests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.r=Resolver()
+    def setUpClass(cls):cls.r=Resolver(historical_through='bh')
 
     def test_all_variants(self):
         self.assertEqual(len(TARGETS),65)

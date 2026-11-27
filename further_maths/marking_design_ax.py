@@ -62,7 +62,7 @@ NOTES={
 
 
 def records(resolver=None):
-    r=Resolver() if resolver is None else resolver
+    r=Resolver(historical_through='bh') if resolver is None else resolver
     items=[r._resolve(p,t,v) for p in sorted(BANKS) for t in range(1,7) for v in (1,2,3)]
     manifest=[(i['id'],fingerprint(i)) for i in items]
     require(len(items)==126 and hashlib.sha256(json.dumps(manifest,separators=(',',':')).encode()).hexdigest()==FROZEN_BATCH_SHA,'AX frozen batch changed; re-review required')

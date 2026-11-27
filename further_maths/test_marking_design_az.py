@@ -10,7 +10,7 @@ from marking_review import inventory_entry
 
 class Tests(unittest.TestCase):
     def test_all_variants(self):
-        r=Resolver();self.assertEqual(len(TARGETS),64)
+        r=Resolver(historical_through='bh');self.assertEqual(len(TARGETS),64)
         for path in BANKS:
             for tier in range(1,7):
                 for v in (1,2,3):
@@ -34,12 +34,12 @@ class Tests(unittest.TestCase):
                             self.assertNotEqual(tag,'az');self.assertEqual(p,make(path,tier,v));self.assertTrue(oracle(p))
 
     def test_frozen_batch(self):
-        r=Resolver();batch=list(records(r));self.assertEqual(len(batch),198)
+        r=Resolver(historical_through='bh');batch=list(records(r));self.assertEqual(len(batch),198)
         self.assertTrue(all(x['review_basis']=='shared_design_plus_variant_oracle' for x in batch))
         self.assertEqual(validate_batch(batch,r)['statuses'],{'editorial_review_recorded':198})
 
     def test_stale_evidence(self):
-        r=Resolver();original=r._resolve
+        r=Resolver(historical_through='bh');original=r._resolve
         def changed(p,t,v):
             i=original(p,t,v)
             if (p,t,v)==('distance-circle',1,1):i['payload']['likely_mistake']+=' changed'
@@ -94,7 +94,7 @@ class Tests(unittest.TestCase):
                 self.assertTrue(x>h and y<lim);self.assertEqual(s.simplify(x*x+y*y),a*a)
 
     def test_presentation_delimiters(self):
-        r=Resolver()
+        r=Resolver(historical_through='bh')
         for p in BANKS:
             for t in range(1,7):
                 for v in (1,2,3):

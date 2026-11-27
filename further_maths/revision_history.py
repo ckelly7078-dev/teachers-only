@@ -2,7 +2,7 @@
 import hashlib
 import json
 from contextlib import contextmanager
-from active_difficulty import SUCCESSIONS, require
+from active_difficulty import SUCCESSIONS, MARK_SUCCESSIONS, require
 
 COLUMNS=('question_id','old_payload','old_marks','old_status','old_sha256','revision')
 HISTORY='difficulty_revision_history'
@@ -64,7 +64,8 @@ def replace_authorised(db,resolver,path,tier,variant,successor):
     old=resolver._resolve_version(path,tier,variant,predecessor)
     new=resolver._resolve(path,tier,variant)
     require(new['revision']=='FM-16'+successor.upper(),'Successor is not active')
-    require(old['marks']==new['marks'] and old['scope']==new['scope'] and not new['teacher_approved'],'Unexpected marking/scope change')
+    expected_marks=MARK_SUCCESSIONS.get((path,tier,successor),(old['marks'],old['marks']))
+    require((old['marks'],new['marks'])==expected_marks and old['scope']==new['scope'] and not new['teacher_approved'],'Unexpected marking/scope change')
     with atomic(db):
         row=db.execute('SELECT payload,marks,review_status FROM calibrated_pathway_questions WHERE id=?',(old['id'],)).fetchone()
         require(row is not None and json.loads(row[0])==old['payload'] and row[1]==old['marks'],'Stored predecessor mismatch')
@@ -73,6 +74,6 @@ def replace_authorised(db,resolver,path,tier,variant,successor):
         prior=db.execute('SELECT old_payload,old_sha256 FROM difficulty_revision_history WHERE question_id=? AND revision=?',(old['id'],old['revision'])).fetchone()
         require(prior is not None and digest(prior[0])==prior[1],'Missing or invalid earlier history')
         db.execute('INSERT INTO difficulty_revision_history VALUES (?,?,?,?,?,?)',(old['id'],row[0],row[1],row[2],digest(row[0]),new['revision']))
-        updated=db.execute('UPDATE calibrated_pathway_questions SET payload=? WHERE id=? AND payload=?',(json.dumps(new['payload'],sort_keys=True,ensure_ascii=False),old['id'],row[0]))
+        updated=db.execute('UPDATE calibrated_pathway_questions SET payload=?,marks=? WHERE id=? AND payload=? AND marks=?',(json.dumps(new['payload'],sort_keys=True,ensure_ascii=False),new['marks'],old['id'],row[0],old['marks']))
         require(updated.rowcount==1,'Active payload update mismatch')
     return new
