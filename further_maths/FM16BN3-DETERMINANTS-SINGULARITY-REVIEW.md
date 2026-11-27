@@ -1,0 +1,9 @@
+# FM-16BN3 - determinant, singularity and inverse written-solution review
+
+Review-only checkpoint following FM-16BN2. Direct written-text inspection covered 144 additional variants in eight pathways: two-by-two determinants, three-by-three determinants, determinant area scaling, determinant classification, singular conditions, transformation collapse, collapse parameters and two-by-two inverses. All question, final-answer and worked-step texts inspected match the active resolver verbatim. All 144 exact-fact checks and 24 independent highest-tier symbolic variant checks passed. No numerical answer error was identified in this editorial inspection.
+
+42 new findings across 14 designs remain open: 24 short-answer completion, nine undefined notation, six notation clarity and three wording clarity. The combined available matrix queue contains 78 findings (36 from BN2 and 42 from BN3); twelve previously reported BN1 findings still need recovery or reinspection. No payload, marking, scope or selection changes.
+
+All 1242 current review-register fingerprints match both the current marking and scope registers. Of these, 1080 have available individual written-review records and 162 are reconstructed current fingerprints associated with historical BN1 batch claims, not recovered original review evidence. Matrix documented coverage is 414/648, including the 162 BN1 claims. The remaining 234 matrix items and 630 vector items have not yet been reported as directly reviewed.
+
+Fresh full read-only active verification passed all 2106 items. Database SHA-256 unchanged from BM4 and BN2. The parent private archive passed integrity checks. No new reference rendering, individual visual certification or cumulative regression rerun. Private item-level findings remain offline. No teacher approval, empirical calibration, merge or deployment. FM-17 remains gated.
