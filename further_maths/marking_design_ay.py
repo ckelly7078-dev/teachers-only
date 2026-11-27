@@ -65,7 +65,7 @@ PROPOSED_AD=(('M','Convert interval bounds and express T as a general congruence
 
 def records(resolver=None):
     r=Resolver() if resolver is None else resolver
-    items=[r._resolve(p,t,v) for p in sorted(BANKS) for t in range(1,7) for v in (1,2,3)]
+    items=[r._resolve_version(p,t,v,'ad') if (p,t)==('angle-units',6) else r._resolve(p,t,v) for p in sorted(BANKS) for t in range(1,7) for v in (1,2,3)]
     manifest=[(i['id'],fingerprint(i)) for i in items]
     require(len(items)==126 and hashlib.sha256(json.dumps(manifest,separators=(',',':')).encode()).hexdigest()==FROZEN_BATCH_SHA,'AY frozen batch changed; re-review required')
     for item in items:

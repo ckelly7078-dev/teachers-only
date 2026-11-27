@@ -8,7 +8,9 @@ from pathlib import Path
 from skill_detail import detail_map
 
 BASES = ('', *('abcdefghijklmnopqrstuvwxyz'[1:]), 'aa', 'ab')
-OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az')
+OVERLAYS = ('ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'an', 'ao', 'ap', 'aq', 'as', 'au', 'av', 'aw', 'ax', 'ay', 'az', 'ba')
+# Each successor must name its exact current predecessor; no implicit overwrite.
+SUCCESSIONS = {('angle-units', 6, 'ba'): 'ad'}
 REVIEWS = ('af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al')
 SCOPES = {'prerequisite_bridge_reviewed': 117, 'conceptual_diagnostic_reviewed': 117,
           'syllabus_linked_candidate': 351, 'challenge_candidate': 104, 'enrichment_only': 13}
@@ -24,7 +26,8 @@ def require(condition, message):
 
 class Resolver:
     def __init__(self):
-        self.bases, self.overlays, self.reviews = {}, {}, {}
+        self.bases, self.overlays, self.reviews, self.versions = {}, {}, {}, {}
+        used_successions = set()
         for suffix in BASES:
             name = 'calibration' + ('_' + suffix if suffix else '')
             bank = importlib.import_module(name + '_bank')
@@ -39,8 +42,17 @@ class Resolver:
             oracle = importlib.import_module('difficulty_revision_' + tag + '_oracle')
             for path, tier in bank.TARGETS:
                 require(path in self.bases and tier in range(1, 7), 'Invalid overlay target')
-                require((path, tier) not in self.overlays, 'Overlapping revisions require explicit migration')
-                self.overlays[path, tier] = (tag, bank.revise, oracle.check)
+                key = (path, tier)
+                succession = (path, tier, tag)
+                previous = self.overlays.get(key)
+                if previous is not None:
+                    require(SUCCESSIONS.get(succession) == previous[0], 'Overlapping revisions require exact predecessor authorisation')
+                    used_successions.add(succession)
+                else:
+                    require(succession not in SUCCESSIONS, 'Authorised predecessor missing')
+                self.overlays[key] = (tag, bank.revise, oracle.check)
+                self.versions[path, tier, tag] = self.overlays[key]
+        require(used_successions == set(SUCCESSIONS), 'Unused succession authorisation')
         require(len(self.overlays) == 298, 'Revision coverage mismatch')
         for tag in REVIEWS:
             review = importlib.import_module('difficulty_review_' + tag)
@@ -69,8 +81,17 @@ class Resolver:
         return self._resolve(path, tier, variant)
 
     def _resolve(self, path, tier, variant):
+        self._key(path, tier, variant)
+        tag = self.overlays.get((path, tier), ('ab',))[0]
+        return self._resolve_version(path, tier, variant, tag)
+
+    def _resolve_version(self, path, tier, variant, tag):
+        # Internal historical audit only; never a preview selection route.
+        self._key(path, tier, variant)
         skill, make, check = self.bases[path]
-        tag, make, check = self.overlays.get((path, tier), ('ab', make, check))
+        if tag != 'ab':
+            require((path, tier, tag) in self.versions, 'Unknown item revision')
+            tag, make, check = self.versions[path, tier, tag]
         p = make(path, tier, variant)
         require((p['path'], p['tier'], p['variant'], p['focus_skill']) == (path, tier, variant, skill), 'Item identity mismatch')
         require(p['origin'] == 'original' and p['examination_source'] is None, 'Origin mismatch')

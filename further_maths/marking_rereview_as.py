@@ -16,6 +16,7 @@ def records():
         old = record['fingerprint']
         record['fingerprint'] = FINGERPRINTS[path][int(variant[1:]) - 1]
         record['supersedes_fingerprint'] = old
+        record['review_basis'] = 'individual_item_rereview'
         record['reviewer'] = 'AI editorial re-review FM-16AS (teacher approval pending)'
         checks = record['checks']
         checks['mathematical_correctness']['evidence'] += ' Prompt, facts, worked solution and final answer unchanged in AS.'

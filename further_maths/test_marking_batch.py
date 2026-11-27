@@ -16,7 +16,7 @@ class Stub:
 class Tests(unittest.TestCase):
     def setUp(self):
         self.r=Stub()
-        self.record={'id':self.r.item['id'],'fingerprint':inventory_entry(self.r.item)['fingerprint'],'reviewer':'Example reviewer','teacher_approved':False,'checks':{d:{'decision':'pass','evidence':'Example only'} for d in DIMENSIONS},'allocation':[{'criterion_index':0,'marks':{'M':2,'A':0,'R':0},'evidence':'Example only'}]}
+        self.record={'id':self.r.item['id'],'fingerprint':inventory_entry(self.r.item)['fingerprint'],'reviewer':'Example reviewer','review_basis':'individual_item_review','teacher_approved':False,'checks':{d:{'decision':'pass','evidence':'Example only'} for d in DIMENSIONS},'allocation':[{'criterion_index':0,'marks':{'M':2,'A':0,'R':0},'evidence':'Example only'}]}
     def test_batch(self):
         self.assertEqual(validate_batch([self.record],self.r)['statuses'],{'editorial_review_recorded':1})
     def test_duplicate(self):

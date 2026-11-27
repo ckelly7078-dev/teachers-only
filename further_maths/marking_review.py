@@ -1,10 +1,12 @@
 """Version-bound marking review inventory; never grants teacher approval."""
 import hashlib
 import json
+import re
 from active_difficulty import require
 
 DIMENSIONS=('mathematical_correctness','criterion_allocation','alternative_methods','consequential_errors','boundary_cases','presentation')
 TYPES={'M','A','R'}
+REVIEW_BASES={'individual_item_review','individual_item_rereview','shared_design_plus_variant_oracle'}
 
 def fingerprint(item):
     data={k:item[k] for k in ('id','revision','scope','marks','payload')}
@@ -25,6 +27,11 @@ def validate_review(item,review):
     require(review.get('id')==entry['id'] and review.get('fingerprint')==entry['fingerprint'],'Stale or mismatched review')
     require(review.get('teacher_approved') is False,'Approval not supported by this framework')
     require(isinstance(review.get('reviewer'),str) and bool(review['reviewer'].strip()),'Reviewer required')
+    basis=review.get('review_basis')
+    require(isinstance(basis,str) and basis in REVIEW_BASES,'Explicit recognised review basis required')
+    if basis=='individual_item_rereview' or 'supersedes_fingerprint' in review:
+        prior=review.get('supersedes_fingerprint')
+        require(isinstance(prior,str) and re.fullmatch(r'[0-9a-f]{64}',prior) is not None and prior!=entry['fingerprint'],'Distinct valid predecessor fingerprint required')
     checks=review.get('checks',{})
     require(set(checks)==set(DIMENSIONS),'Incomplete review dimensions')
     for dimension,value in checks.items():

@@ -31,17 +31,21 @@ class Tests(unittest.TestCase):
                         elif path=='modulus-constraints':
                             self.assertEqual(item['revision'],'FM-16AH');self.assertEqual(p,ah_revise(path,tier,v))
                         else:
-                            self.assertEqual(item['revision'],'FM-16AD');self.assertEqual(p,ad_revise(path,tier,v))
-                            expected='needs_type_review' if path=='angle-units' else 'typed_provisional'
-                            self.assertEqual(inventory_entry(item)['status'],expected)
+                            if path=='angle-units':
+                                self.assertEqual(item['revision'],'FM-16BA')
+                                self.assertEqual(r._resolve_version(path,tier,v,'ad')['payload'],ad_revise(path,tier,v))
+                            else:
+                                self.assertEqual(item['revision'],'FM-16AD');self.assertEqual(p,ad_revise(path,tier,v))
+                            self.assertEqual(inventory_entry(item)['status'],'typed_provisional')
 
     def test_frozen_batch(self):
         r=Resolver(); batch=list(records(r));self.assertEqual(len(batch),126)
         self.assertTrue(all(x['review_basis']=='shared_design_plus_variant_oracle' for x in batch))
-        result=validate_batch(batch,r)
-        self.assertEqual(result['statuses'],{'editorial_review_recorded':123,'changes_requested':3})
-        self.assertEqual({x['id'] for x in result['results'] if x['status']=='changes_requested'},
-                         {f'CAL.angle-units.T6.V{v}' for v in (1,2,3)})
+        stale=[x for x in batch if x['id'].startswith('CAL.angle-units.T6.')]
+        self.assertEqual(len(stale),3)
+        for row in stale:
+            with self.assertRaisesRegex(ValueError,'Stale'):validate_batch([row],r)
+        self.assertEqual(validate_batch([x for x in batch if x not in stale],r)['statuses'],{'editorial_review_recorded':123})
 
     def test_stale_evidence(self):
         r=Resolver(); original=r._resolve
