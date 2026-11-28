@@ -136,10 +136,14 @@ def application(catalogue,users,review_db=None):
                 if path == '/' and env.get('teachers_only.as1_mounted'):
                     body = body.replace(b'<!--MOUNT_NAV-->', b'<nav aria-label="Related workspaces"><a href="/index.html">Teacher portal</a> &middot; <a href="/foundation/web/index.html">Foundation Mathematics Studio</a></nav>')
                 return send('200 OK',body,mime)
-            if method=='GET' and path in ('/api/list','/api/item','/api/page'):
+            if method=='GET' and path in ('/api/list','/api/item','/api/page','/api/progress'):
                 qs=parse_qs(env.get('QUERY_STRING',''),keep_blank_values=True,max_num_fields=2,strict_parsing=True)
                 require(all(len(v)==1 for v in qs.values()), 'Duplicate query parameter')
                 mode=qs['mode'][0]
+                if path=='/api/progress':
+                    require(set(qs)=={'mode'},'Invalid query parameters')
+                    from review_session_bt import actor_progress
+                    return send('200 OK',actor_progress(catalogue,review_db,actor,mode))
                 if path=='/api/list':
                     require(set(qs)=={'mode'},'Invalid query parameters');return send('200 OK',{'ids':catalogue.list_ids(mode),'release_allowed':False})
                 require(set(qs)=={'mode','id'},'Invalid query parameters');key=qs['id'][0]
