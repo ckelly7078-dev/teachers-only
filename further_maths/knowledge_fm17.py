@@ -54,8 +54,8 @@ class KnowledgeBank:
     Source-linked evidence stays internal. Concept links do not establish exact
     subskill or item equivalence. No automatic conversion M/W/MW -> M/A/R.
     """
-    def __init__(self, database, edits, reviews):
-        self.resolver = SuccessorResolver(edits)
+    def __init__(self, database, edits, reviews, *, resolver=None):
+        self.resolver = SuccessorResolver(edits) if resolver is None else resolver
         self.resolver.verify(database)
         self.items = {}; self.profiles = {}; self.reviews = {}; self.paths = {}
         records = {r['id']: r for r in reviews}
