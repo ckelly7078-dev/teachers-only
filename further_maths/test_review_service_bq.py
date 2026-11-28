@@ -1,12 +1,14 @@
 import base64
 import io
 import json
+import os
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
 from urllib.parse import urlencode
-from review_service_bq import application, credentials, CHECKS, mount_as1
+from review_service_bq import application, credentials, CHECKS, mount_as1, check_ledger_path
 from calibration_bq import summarize
 from active_difficulty import Resolver, require
 from marking_review import fingerprint
@@ -51,7 +53,7 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(self.request('/api/review',body={**data,'proof_sha256':'b'*64})['status'],400)
         self.assertEqual(self.request('/api/review',body={**data,'teacher_approved':True})['status'],400)
         result=self.request('/api/review',body=data);self.assertEqual(result['status'],200);self.assertFalse(json.loads(result['body'])['teacher_approved'])
-        with sqlite3.connect(self.db) as db:self.assertEqual(db.execute('select actor,item_id,fingerprint from observations').fetchall(),[('fictional-test-teacher',self.cat.key,data['fingerprint'])])
+        with closing(sqlite3.connect(self.db)) as db:self.assertEqual(db.execute('select actor,item_id,fingerprint from observations').fetchall(),[('fictional-test-teacher',self.cat.key,data['fingerprint'])])
     def test_optional_mount_preserves_existing_paths(self):
         def fallback(env,start):
             start('200 OK',[]);return [env['PATH_INFO'].encode()]
@@ -60,6 +62,22 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(self.request('/as1')['status'],302)
         self.assertEqual(self.request('/as1/api/list',{'mode':'learning_preview'},auth=False)['status'],401)
         self.assertEqual(self.request('/as1/api/list',{'mode':'learning_preview'})['status'],200)
+    def test_mounted_return_navigation_is_opt_in(self):
+        self.assertNotIn(b'Foundation Mathematics Studio', self.request('/')['body'])
+        self.app = mount_as1(lambda env, start: [], self.app)
+        self.assertIn(b'href="/foundation/web/index.html"', self.request('/as1/')['body'])
+        self.assertEqual(self.request('/as1/', auth=False)['status'], 401)
+
+    def test_existing_ledger_must_be_distinct_from_foundation_data(self):
+        source = Path(self.tmp.name) / 'foundation.sqlite'
+        source.touch()
+        alias = Path(self.tmp.name) / 'alias'
+        os.link(source, alias)
+        for path in (source, alias):
+            with self.assertRaises(ValueError):
+                check_ledger_path(path, [source])
+        check_ledger_path(self.db, [source])
+
     def test_aggregate_calibration_rejects_missing_and_stale_data(self):
         item=self.cat.item;data={'id':item['id'],'fingerprint':fingerprint(item),'marks':item['marks'],'counts':[2,8]}
         result=summarize(item,data,minimum_attempts=20);self.assertEqual(result['facility'],0.8);self.assertFalse(result['minimum_attempts_met']);self.assertFalse(result['teacher_approved'])

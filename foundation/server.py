@@ -164,7 +164,11 @@ def application(env,start):
                     ('WWW-Authenticate','Basic realm="Foundation curriculum", charset="UTF-8"')])
         if path in ASSETS and method=='GET':
             target,mime = ASSETS[path]
-            return send('200 OK',target.read_bytes(),mime)
+            body = target.read_bytes()
+            if mime == 'text/html' and env.get('teachers_only.as1_mounted'):
+                body = body.replace(b'<!--AS1_MOUNT_LINK-->',
+                                    b'<a href="/as1/">AS1 Further Mathematics review</a>')
+            return send('200 OK',body,mime)
         dbpath = os.environ.get('KB_DB','')
         if not Path(dbpath).is_file():
             return send('503 Service Unavailable',{'error':'The Foundation database is unavailable'})

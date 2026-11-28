@@ -2,6 +2,7 @@
 import argparse
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from active_difficulty import require
 from calibration_bq import summarize
@@ -15,7 +16,7 @@ def observation_rows(path):
         return []
     path = Path(path).resolve()
     require(path.is_file(), 'Observation ledger does not exist')
-    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
         db.row_factory = sqlite3.Row
         return [dict(r) for r in db.execute('SELECT seq,actor,item_id,fingerprint,revision,proof_sha256,checks,note FROM observations ORDER BY seq')]
 
@@ -82,10 +83,16 @@ def main():
     parser.add_argument('--calibration', type=Path)
     parser.add_argument('--minimum-attempts', type=int, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--editorial-bundle', type=Path, help='Directory containing the BS visual and scope registers')
     args = parser.parse_args()
     catalogue = PrivateCatalogue(args.bundle)
     calibration = [] if args.calibration is None else [json.loads(line) for line in args.calibration.read_text().splitlines() if line.strip()]
     report = reconcile(catalogue.items, catalogue.proof_sha256, observation_rows(args.observations), calibration, minimum_attempts=args.minimum_attempts)
+    if args.editorial_bundle is not None:
+        from marking_batch import read_batch
+        from review_queue_bs import add_editorial_evidence
+        report = add_editorial_evidence(report, read_batch(args.editorial_bundle / 'FM16BS-visual.jsonl'),
+                                        read_batch(args.editorial_bundle / 'FM16BS-scope.jsonl'))
     with args.output.open('x') as f:
         json.dump(report, f, indent=2); f.write('\n')
 

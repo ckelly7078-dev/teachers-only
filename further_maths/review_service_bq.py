@@ -14,6 +14,7 @@ import hmac
 import json
 import os
 import sqlite3
+from contextlib import closing
 import sys
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -104,10 +105,20 @@ def save_review(path, actor, item, data):
     require(isinstance(checks,dict) and set(checks) == set(CHECKS) and all(v in ('pass','revise','not_reviewed') for v in checks.values()), 'Invalid review decisions')
     require(isinstance(note,str) and 1 <= len(note.strip()) <= 2000, 'Review evidence note required')
     # Deliberately record observations only; no teacher-approved flag or tier change.
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         db.execute('CREATE TABLE IF NOT EXISTS observations (seq INTEGER PRIMARY KEY, actor TEXT NOT NULL, item_id TEXT NOT NULL, fingerprint TEXT NOT NULL, revision TEXT NOT NULL, proof_sha256 TEXT NOT NULL, observed_utc TEXT NOT NULL, checks TEXT NOT NULL, note TEXT NOT NULL)')
         seq=db.execute('INSERT INTO observations(actor,item_id,fingerprint,revision,proof_sha256,observed_utc,checks,note) VALUES (?,?,?,?,?,?,?,?)',(actor,data['id'],data['fingerprint'],item['item']['revision'],item['proof_sha256'],datetime.datetime.now(datetime.timezone.utc).isoformat(),json.dumps(checks,sort_keys=True),note.strip())).lastrowid
     return {'observation_id':seq,'release_allowed':False,'teacher_approved':False}
+
+
+def check_ledger_path(ledger, protected):
+    if ledger is None:
+        return
+    ledger = Path(ledger).resolve()
+    for candidate in protected:
+        target = Path(candidate).resolve()
+        require(ledger != target and not (ledger.exists() and target.exists() and ledger.samefile(target)),
+                'Review ledger must be separate from the catalogue, Foundation database and credentials')
 
 
 def application(catalogue,users,review_db=None):
@@ -120,7 +131,11 @@ def application(catalogue,users,review_db=None):
         method=env.get('REQUEST_METHOD'); path=env.get('PATH_INFO','')
         try:
             if method=='GET' and path in ASSETS:
-                name,mime=ASSETS[path];return send('200 OK',(Path(__file__).parent/name).read_bytes(),mime)
+                name,mime=ASSETS[path]
+                body=(Path(__file__).parent/name).read_bytes()
+                if path == '/' and env.get('teachers_only.as1_mounted'):
+                    body = body.replace(b'<!--MOUNT_NAV-->', b'<nav aria-label="Related workspaces"><a href="/index.html">Teacher portal</a> &middot; <a href="/foundation/web/index.html">Foundation Mathematics Studio</a></nav>')
+                return send('200 OK',body,mime)
             if method=='GET' and path in ('/api/list','/api/item','/api/page'):
                 qs=parse_qs(env.get('QUERY_STRING',''),keep_blank_values=True,max_num_fields=2,strict_parsing=True)
                 require(all(len(v)==1 for v in qs.values()), 'Duplicate query parameter')
@@ -146,6 +161,7 @@ def mount_as1(foundation_app, as1_app):
     """Optional same-origin mount; existing Foundation and portal paths are untouched."""
     def mounted(env,start):
         path=env.get('PATH_INFO','')
+        env = {**env, 'teachers_only.as1_mounted': True}
         if path=='/as1':
             start('302 Found',[('Location','/as1/'),('Cache-Control','no-store'),('Content-Length','0')]);return [b'']
         if path.startswith('/as1/'):
@@ -163,7 +179,10 @@ def main():
         with os.fdopen(os.open(args.users,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'w') as f:json.dump([user],f)
         return
     require(args.bundle is not None,'Private bundle required')
-    require(args.review_db is None or args.review_db.resolve() not in {(args.bundle/n).resolve() for n in PRIVATE_FILES},'Review ledger must be separate')
+    protected = [args.users, *(args.bundle / name for name in PRIVATE_FILES)]
+    if args.with_foundation:
+        protected.extend(os.environ[name] for name in ('KB_DB', 'KB_USERS') if os.environ.get(name))
+    check_ledger_path(args.review_db, protected)
     users=json.loads(args.users.read_text());require(isinstance(users,list) and users,'Teacher credentials required')
     app=application(PrivateCatalogue(args.bundle),users,args.review_db)
     if args.with_foundation:

@@ -26,3 +26,7 @@ Setup, ingestion, restoration, retrieval budgets, rights decisions and current v
 node tests/smoke.cjs
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
+
+## AS1 Further Mathematics teacher review
+
+The combined localhost service adds an AS1 review link to the teacher dashboard and Foundation Mathematics Studio. The AS1 workspace links back to both. Foundation and AS1 check their configured teacher accounts independently. The static portal and the Foundation-only server retain their original entry points and nine modules. Setup, review queues and integration checks are in the [FM-16BS handover](further_maths/FM16BS-INTEGRATION.md).

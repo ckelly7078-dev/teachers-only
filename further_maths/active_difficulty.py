@@ -4,6 +4,7 @@ import collections
 import importlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from skill_detail import detail_map
 
@@ -126,7 +127,7 @@ class Resolver:
     def verify(self, database=None):
         stored, scopes = None, None
         if database is not None:
-            with sqlite3.connect(Path(database).resolve().as_uri() + '?mode=ro', uri=True) as db:
+            with closing(sqlite3.connect(Path(database).resolve().as_uri() + '?mode=ro', uri=True)) as db:
                 require(db.execute('pragma integrity_check').fetchall() == [('ok',)], 'Database integrity failure')
                 require(not db.execute('pragma foreign_key_check').fetchall(), 'Foreign key failure')
                 rows = db.execute('select id,path_id,tier,variant,marks,assessment_role,payload,review_status from calibrated_pathway_questions').fetchall()
